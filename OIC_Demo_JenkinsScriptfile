@@ -37,14 +37,14 @@ pipeline {
         stage('Import Integration') {
             steps {
                 script {
-                    Update_details((params.InstanceURL).toString())
+                    Update_details((params.Instance_URL).toString())
                     //echo "${env.serviceURL}"
                     def selectedOption = "${params.Import_Method}".trim()
                     if (selectedOption == 'New') {
                         echo 'Adding new integration'
                         def integURL = "${env.serviceURL}/ic/api/integration/v1/integrations/archive"
 			//echo "${integURL}"
-                        def deployIntegCmd = "curl --location \"${integURL}\" --user ${env.USR}:${env.PSW} --form \"file=@\\\"${params.IARFileName}\\\"\""
+                        def deployIntegCmd = "curl --location \"${integURL}\" --user ${env.USR}:${env.PSW} --form \"file=@\\\"${params.IAR_File_Name}\\\"\""
 			bat(deployIntegCmd)
 
                     } else if (selectedOption == 'Replace') {
@@ -53,7 +53,7 @@ pipeline {
 			//echo "${integName}"
                         def deactivateIntegrationCmd = "curl --user ${env.USR}:${env.PSW} --header \"Content-Type: application/json\" --header \"X-HTTP-Method-Override: PATCH\" -d @Deactivate.json -d 'enableAsyncActivationMode=true' \"${env.serviceURL}/ic/api/integration/v1/integrations/${integName}\""
                         bat(deactivateIntegrationCmd)
-                        def updateIntegFileCmd = "curl -X PUT --user ${env.USR}:${env.PSW} --header \"Accept: application/json\" --form \"file=@\\\"${params.IARFileName}\\\"\" --form type=application/octet-stream ${env.serviceURL}/ic/api/integration/v1/integrations/archive"
+                        def updateIntegFileCmd = "curl -X PUT --user ${env.USR}:${env.PSW} --header \"Accept: application/json\" --form \"file=@\\\"${params.IAR_File_Name}\\\"\" --form type=application/octet-stream ${env.serviceURL}/ic/api/integration/v1/integrations/archive"
                         bat(updateIntegFileCmd)
                     } else {
                         echo 'No import method is selected'
@@ -70,7 +70,7 @@ pipeline {
             steps {
                 script {
 
-                    def csvFile = readFile(params.ConnectionProperties).trim()
+                    def csvFile = readFile(params.Connection_Properties).trim()
                     def records = csvFile.readLines().drop(1).collect { line -> line.tokenize(',') }
                     records.each { record ->
                         def field1 = record[0]
@@ -82,7 +82,7 @@ pipeline {
 
                         def conProperties = """
                             { 
-                                "connectionProperties": { 
+                                "Connection_Properties": { 
                                     "propertyGroup": "CONNECTION_PROPS",
                                     "propertyName": "connectionUrl",
                                     "propertyType": "URL",
@@ -132,7 +132,7 @@ pipeline {
         stage('Import Lookup') {
             steps {
                 script {
-                    def files = params.FileNames.split(',')
+                    def files = params.Lookup_Files.split(',')
                     def selectedOption = params.Import_Method.trim()
 
  
