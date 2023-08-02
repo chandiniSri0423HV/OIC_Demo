@@ -82,7 +82,7 @@ pipeline {
 
                         def conProperties = """
                             { 
-                                "Connection_Properties": { 
+                                "connectionProperties": { 
                                     "propertyGroup": "CONNECTION_PROPS",
                                     "propertyName": "connectionUrl",
                                     "propertyType": "URL",
