@@ -86,7 +86,7 @@ pipeline {
                                     "propertyGroup": "CONNECTION_PROPS",
                                     "propertyName": "connectionUrl",
                                     "propertyType": "URL",
-                                    "propertyValue": "${field1}"
+                                    "propertyValue": ${field1}
                                 },
                                 "securityPolicy": "BASIC_AUTH",
                                 "securityProperties": [
