@@ -30,7 +30,7 @@ pipeline {
     agent any
     environment {
         DEV_Creds = credentials('DEV_CredID')
-OIC_URL   = credentials('oic-url')   
+//OIC_URL   = credentials('oic-url')   
     }
  //   parameters {
    //     booleanParam(name: 'Activate_Integration', defaultValue: false, description: 'Check the box to activate the integration after importing')
