@@ -18,6 +18,11 @@ def Update_details(instance_selected) {
         }
     }
 }
+echo "URL: ${env.serviceURL}"
+echo "USR: ${env.USR}"
+echo "PSW: ${env.PSW}"
+echo "IAR File: ${params.IARFileName}"
+
 
 pipeline {
     agent any
