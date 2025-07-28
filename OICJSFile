@@ -25,7 +25,7 @@ pipeline {
     agent any
     environment {
         DEV_Creds = credentials('DEV_CredID')
-        OIC_URL = credentials('oic-url')
+        OIC_URL = credentials('OIC_URL')
     }
   /*  parameters {
         choice(name: 'Instance_URL', choices: ['DEV', 'UAT'], description: 'Select Instance')
