@@ -27,7 +27,7 @@ pipeline {
         DEV_Creds = credentials('DEV_CredID')
         OIC_URL = credentials('oic-url')
     }
-    parameters {
+  /*  parameters {
         choice(name: 'Instance_URL', choices: ['DEV', 'UAT'], description: 'Select Instance')
         choice(name: 'Import_Method', choices: ['New', 'Replace'], description: 'Select import method')
         string(name: 'IAR_File_Name', defaultValue: '', description: 'Name of the IAR file')
@@ -35,7 +35,7 @@ pipeline {
         string(name: 'Connection_Properties', defaultValue: '', description: 'CSV file with connection details')
         string(name: 'Lookup_Files', defaultValue: '', description: 'Comma-separated list of lookup files')
         booleanParam(name: 'Activate_Integration', defaultValue: false, description: 'Check to activate integration')
-    }
+    }*/
     stages {
         stage('Import Integration') {
             steps {
