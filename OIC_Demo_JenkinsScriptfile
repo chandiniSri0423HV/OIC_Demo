@@ -32,9 +32,9 @@ pipeline {
     environment {
         DEV_Creds = credentials('DEV_CredID')
     }
-    parameters {
-        booleanParam(name: 'Activate_Integration', defaultValue: false, description: 'Check the box to activate the integration after importing')
-    }
+ //   parameters {
+   //     booleanParam(name: 'Activate_Integration', defaultValue: false, description: 'Check the box to activate the integration after importing')
+    //}
 
  
 
