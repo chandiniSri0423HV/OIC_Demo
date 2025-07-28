@@ -14,14 +14,13 @@ def Update_details(instance_selected) {
         env.USR = env.DEV_Creds_USR
         env.PSW = env.DEV_Creds_PSW
         //echo "${env.DEV_URL}"
-        env.serviceURL = env.DEV_URL   
-    }
+        env.serviceURL = env.OIC_URL   }
 else if (instance_selected.equals("UAT")) {
      //echo "inside update details-dev"
         env.USR = env.DEV_Creds_USR
         env.PSW = env.DEV_Creds_PSW
         //echo "${env.TEST_URL}"
-        env.serviceURL = env.TEST_URL   
+        env.serviceURL = env.OIC_URL //TEST_URL   
     }
 }
 
@@ -31,6 +30,7 @@ pipeline {
     agent any
     environment {
         DEV_Creds = credentials('DEV_CredID')
+OIC_URL   = credentials('oic-url')   
     }
  //   parameters {
    //     booleanParam(name: 'Activate_Integration', defaultValue: false, description: 'Check the box to activate the integration after importing')
