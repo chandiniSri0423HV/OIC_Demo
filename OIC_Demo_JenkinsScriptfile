@@ -137,7 +137,14 @@ pipeline {
         stage('Import Lookup') {
             steps {
                 script {
-                    def files = params.Lookup_Files.split(',')
+                   // def files = params.Lookup_Files.split(',')
+if (someVar != null) {
+    def items = Lookup_Files.split(",")
+} else {
+    error("Required variable [Lookup_Files] is null. Please check parameters or environment.")
+}
+def items = (Lookup_Files ?: "").split(",")
+
                     def selectedOption = params.Import_Method.trim()
 
  
