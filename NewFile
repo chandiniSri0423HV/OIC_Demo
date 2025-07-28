@@ -14,7 +14,7 @@ def Update_details(instance_selected) {
         withCredentials([usernamePassword(credentialsId: 'DEV_CredID', passwordVariable: 'PSW', usernameVariable: 'USR')]) {
             env.USR = USR
             env.PSW = PSW
-            env.serviceURL = env.OIC_URL   // Use global environment variable or define 'OIC_URL' in Global Properties
+            env.serviceURL = "https://testinstance-idevjxz332qf-ia.integration.ocp.oraclecloud.com"
         }
     }
 }
@@ -100,7 +100,7 @@ pipeline {
 
                         echo "Configuring connection ${connName}"
                         bat """
-                        curl -X POST --user ${env.USR}:${env.PSW} --header "X-HTTP-Method-Override:PATCH" --header "Content-Type:application/json" -d @payload.json "${env.serviceURL}/ic/api/integration/v1/connections/${connName}"
+                        curl -X POST --user ${env.USR}:${env.PSW} --header "X-HTTP-Method-Override:PATCH" --header "Content-Type:application/json" -d @payload.json "https://testinstance-idevjxz332qf-ia.integration.ocp.oraclecloud.com/ic/api/integration/v1/connections/${connName}"
                         """
                     }
                 }
@@ -116,10 +116,10 @@ pipeline {
                     fileList.each { fileName ->
                         if (selectedOption == 'New') {
                             echo "Importing new lookup: ${fileName}"
-                            bat "curl -X POST --user ${env.USR}:${env.PSW} -F \"file=@${fileName}\" -F \"type=application/octet-stream\" ${env.serviceURL}/ic/api/integration/v1/lookups/archive"
+                            bat "curl -X POST --user ${env.USR}:${env.PSW} -F \"file=@${fileName}\" -F \"type=application/octet-stream\" https://testinstance-idevjxz332qf-ia.integration.ocp.oraclecloud.com/ic/api/integration/v1/lookups/archive"
                         } else if (selectedOption == 'Replace') {
                             echo "Replacing lookup: ${fileName}"
-                            bat "curl -X PUT --user ${env.USR}:${env.PSW} -F \"file=@${fileName}\" -F \"type=application/octet-stream\" ${env.serviceURL}/ic/api/integration/v1/lookups/archive"
+                            bat "curl -X PUT --user ${env.USR}:${env.PSW} -F \"file=@${fileName}\" -F \"type=application/octet-stream\" https://testinstance-idevjxz332qf-ia.integration.ocp.oraclecloud.com/ic/api/integration/v1/lookups/archive"
                         }
                     }
                 }
@@ -132,11 +132,11 @@ pipeline {
                     def integName = params.Integration_Identifier
                     if (params.Activate_Integration) {
                         echo 'Activating integration...'
-                        def cmd = "curl --user ${env.USR}:${env.PSW} --header \"Content-Type: application/json\" --header \"X-HTTP-Method-Override: PATCH\" -d @Activate.json \"${env.serviceURL}/ic/api/integration/v1/integrations/${integName}\""
+                        def cmd = "curl --user ${env.USR}:${env.PSW} --header \"Content-Type: application/json\" --header \"X-HTTP-Method-Override: PATCH\" -d @Activate.json \"https://testinstance-idevjxz332qf-ia.integration.ocp.oraclecloud.com/ic/api/integration/v1/integrations/${integName}\""
                         bat(cmd)
                     } else {
                         echo 'Deactivating integration...'
-                        def cmd = "curl --user ${env.USR}:${env.PSW} --header \"Content-Type: application/json\" --header \"X-HTTP-Method-Override: PATCH\" -d @Deactivate.json \"${env.serviceURL}/ic/api/integration/v1/integrations/${integName}\""
+                        def cmd = "curl --user ${env.USR}:${env.PSW} --header \"Content-Type: application/json\" --header \"X-HTTP-Method-Override: PATCH\" -d @Deactivate.json \"https://testinstance-idevjxz332qf-ia.integration.ocp.oraclecloud.com/ic/api/integration/v1/integrations/${integName}\""
                         bat(cmd)
                     }
                 }
