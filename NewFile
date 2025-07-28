@@ -8,22 +8,16 @@ def passwordHandler(String input) {
    }
    return result.toString()
 }
+
 def Update_details(instance_selected) {
     if (instance_selected.equals("DEV")) {
-     //echo "inside update details-dev"
-     //   env.USR = env.DEV_Creds_USR
-       // env.PSW = env.DEV_Creds_PSW
-        //echo "${env.DEV_URL}"
-        //env.serviceURL = env.DEV_URL
-         withCredentials([usernamePassword(credentialsId: 'DEV_CredID', passwordVariable: 'PSW', usernameVariable: 'USR')]) 
-{
+        withCredentials([usernamePassword(credentialsId: 'DEV_CredID', passwordVariable: 'PSW', usernameVariable: 'USR')]) {
             env.USR = USR
             env.PSW = PSW
             env.serviceURL = env.DEV_URL
+        }
     }
 }
-
- 
 
 pipeline {
     agent any
@@ -34,26 +28,20 @@ pipeline {
         booleanParam(name: 'Activate_Integration', defaultValue: false, description: 'Check the box to activate the integration after importing')
     }
 
- 
-
     stages {
         stage('Import Integration') {
             steps {
                 script {
                     Update_details((params.InstanceURL).toString())
-                    //echo "${env.serviceURL}"
                     def selectedOption = "${params.Import_Method}".trim()
                     if (selectedOption == 'New') {
                         echo 'Adding new integration'
                         def integURL = "${env.serviceURL}/ic/api/integration/v1/integrations/archive"
-			//echo "${integURL}"
                         def deployIntegCmd = "curl --location \"${integURL}\" --user ${env.USR}:${env.PSW} --form \"file=@\\\"${params.IARFileName}\\\"\""
-			bat(deployIntegCmd)
-
+                        bat(deployIntegCmd)
                     } else if (selectedOption == 'Replace') {
                         echo 'Replacing an integration'
                         def integName = params.Integration_Identifier.toString()
-			//echo "${integName}"
                         def deactivateIntegrationCmd = "curl --user ${env.USR}:${env.PSW} --header \"Content-Type: application/json\" --header \"X-HTTP-Method-Override: PATCH\" -d @Deactivate.json -d 'enableAsyncActivationMode=true' \"${env.serviceURL}/ic/api/integration/v1/integrations/${integName}\""
                         bat(deactivateIntegrationCmd)
                         def updateIntegFileCmd = "curl -X PUT --user ${env.USR}:${env.PSW} --header \"Accept: application/json\" --form \"file=@\\\"${params.IARFileName}\\\"\" --form type=application/octet-stream ${env.serviceURL}/ic/api/integration/v1/integrations/archive"
@@ -65,14 +53,9 @@ pipeline {
             }
         }
 
- 
-
- 
-
         stage('Import Connection') {
             steps {
                 script {
-
                     def csvFile = readFile(params.ConnectionProperties).trim()
                     def records = csvFile.readLines().drop(1).collect { line -> line.tokenize(',') }
                     records.each { record ->
@@ -80,8 +63,6 @@ pipeline {
                         def field2 = record[1]
                         def field3 = record[2]
                         def field4 = record[3]
-
- 
 
                         def conProperties = """
                             { 
@@ -128,25 +109,15 @@ pipeline {
             }
         }
 
- 
-
- 
-
         stage('Import Lookup') {
             steps {
                 script {
                     def files = params.FileNames.split(',')
                     def selectedOption = params.Import_Method.trim()
 
- 
-
                     for (int i = 0; i < files.size(); i++) {
                         def fileName = files[i].trim()
-
- 
-
                         if (fileName) {
-                            // Execute curl command based on the import method
                             if (selectedOption == 'New') {
                                 echo 'Adding new lookup'
                                 bat """
@@ -166,25 +137,17 @@ pipeline {
             }
         }
 
- 
-
- 
-
         stage('Activation of Integration') {
             steps {
                 script {
                     def integName = params.Integration_Identifier.toString()
                     if (params.Activate_Integration) {
-                        // Perform action when the checkbox is checked
                         echo 'Checkbox is checked'
                         def activateIntegrationCmd = "curl --user ${env.USR}:${env.PSW} --header \"Content-Type: application/json\" --header \"X-HTTP-Method-Override: PATCH\" -d @Activate.json --location \"${env.serviceURL}/ic/api/integration/v1/integrations/${integName}\""
                         bat(activateIntegrationCmd)
                         echo "Integration Activated"
-                        // Add your desired logic here
                     } else {
-                        // Perform a different action when the checkbox is not checked
                         echo 'Checkbox is not checked'
-                        // Add your desired logic here
                         def deactivateIntegrationCmd = "curl --user ${env.USR}:${env.PSW} --header \"Content-Type: application/json\" --header \"X-HTTP-Method-Override: PATCH\" -d @Deactivate.json -d 'enableAsyncActivationMode=true' \"${env.serviceURL}/ic/api/integration/v1/integrations/${integName}\""
                         bat(deactivateIntegrationCmd)
                         echo "Integration Configured"
@@ -193,5 +156,4 @@ pipeline {
             }
         }
     }
-}
 }
