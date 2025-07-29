@@ -15,7 +15,7 @@ def passwordHandler(String input) {
 pipeline {
     agent any
     environment {
-withCredentials([usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW')])
+//withCredentials([usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW')])
     }
    /* parameters {
         booleanParam(name: 'Activate_Integration', defaultValue: false, description: 'Check the box to activate the integration after importing')
@@ -26,6 +26,8 @@ withCredentials([usernamePassword(credentialsId: 'DEV_CredID', usernameVariable:
     stages {
         stage('Import Integration') {
             steps {
+                withCredentials([usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
+
                 script {
 if (params.InstanceURL.toString() == "DEV") {
                         echo "Using DEV environment"
