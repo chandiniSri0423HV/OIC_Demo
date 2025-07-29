@@ -31,18 +31,19 @@ pipeline {
                 script {
 if (params.InstanceURL.toString() == "DEV") {
                         echo "Using DEV environment"
-                           def env.serviceURL = env.DEV_URL
-                           def env.testInstance = env.test_Integration_Instance
-                          def  env.USR = DEV_Creds_USR
-                           def env.PSW = DEV_Creds_PSW
+                           def serviceURL = env.DEV_URL
+                           def testInstance = env.test_Integration_Instance
+                       //   def USR = DEV_Creds_USR
+                         //  def PSW = DEV_Creds_PSW
                     }
 
                     echo "${env.serviceURL}"
+echo "${eserviceURL}"
 echo "${params.Import_Method}"
                     def selectedOption = "${params.Import_Method}".trim()
                     if (selectedOption == 'New') {
                         echo 'Adding new integration'
-                        def integURL = "${env.serviceURL}/ic/api/integration/v1/integrations/archive??integrationInstance=${env.testInstance}"
+                        def integURL = "${serviceURL}/ic/api/integration/v1/integrations/archive??integrationInstance=${testInstance}"
 			echo "${integURL}"
                         def deployIntegCmd = "curl --location \"${integURL}\" --user ${USR}:${PSW} --form \"file=@\\\"${params.IARFileName}\\\"\""
 			bat(deployIntegCmd)
