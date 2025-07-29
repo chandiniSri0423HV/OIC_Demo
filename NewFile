@@ -38,7 +38,6 @@ Update_details((params.InstanceURL).toString())
                      echo 'Adding new integration'
 
                         def integURL = "${env.serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${env.testInstance}"
-                        def integURL = "${env.serviceURL}/ic/api/integration/v1/integrations/archive"
 			//echo "${integURL}"
                         def deployIntegCmd = "curl --location \"${integURL}\" --user ${env.USR}:${env.PSW} --form \"file=@\\\"${params.IARFileName}\\\"\""
 			bat(deployIntegCmd)
