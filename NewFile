@@ -2,10 +2,16 @@ pipeline {
     agent any
 
     environment {
-        DEV_Creds = credentials('DEV_CredID')  // This should be a Jenkins credential (Username & Password)
+        DEV_Creds = credentials('DEV_CredID')  // UsernamePassword credentials in Jenkins
+     //   DEV_URL = 'https://design.integration.us-ashburn-1.ocp.oraclecloud.com'  // Replace with actual DEV URL
+     //   test_Integration_Instance = 'testinstance-idevjxz332qf-ia'  // Replace with actual instance ID
     }
 
-   
+  /*  parameters {
+        choice(name: 'InstanceURL', choices: ['DEV'], description: 'Select the target instance (only DEV supported here)')
+        choice(name: 'Import_Method', choices: ['New', 'Replace'], description: 'Select import method')
+        string(name: 'IARFileName', defaultValue: 'ITEM_INTEGRATION_01.00.0000.iar', description: 'IAR file to import')
+    }*/
 
     stages {
         stage('Set Environment') {
@@ -17,6 +23,8 @@ pipeline {
                         env.PSW = env.DEV_Creds_PSW
                         env.serviceURL = env.DEV_URL
                         env.testInstance = env.test_Integration_Instance
+                    } else {
+                        error("Unsupported instance selected: ${instance_selected}")
                     }
                 }
             }
@@ -27,15 +35,18 @@ pipeline {
                 script {
                     def selectedOption = params.Import_Method.trim()
                     if (selectedOption == 'New') {
-                        echo 'Adding new integration'
+                        echo 'Adding new integration...'
 
                         def integURL = "${env.serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${env.testInstance}"
 
+                        // Windows-compatible multi-line curl command
                         def deployIntegCmd = """curl --location "${integURL}" ^
 --user ${env.USR}:${env.PSW} ^
---form "file=@\\"${params.IARFileName}\\""
-"""
-                        bat(label: 'Import Integration', script: deployIntegCmd)
+--form "file=@\\"${params.IARFileName}\\"" """
+
+                        bat script: deployIntegCmd
+                    } else {
+                        echo "Import method '${selectedOption}' is not yet implemented."
                     }
                 }
             }
