@@ -30,10 +30,11 @@ pipeline {
     stages {
         stage('Import Integration') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
+                withCredentials([usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW')]),
+ string(credentialsId: 'OAuth', variable: 'OAuth'){
                     script {
-					  def serviceURL = ""
-                        def testInstance = ""
+					  def serviceURL = "https://design.integration.us-ashburn-1.ocp.oraclecloud.com"
+                        def testInstance = "testinstance-idevjxz332qf-ia"
 if (params.InstanceURL.toString() == "DEV") {
                             echo "Using DEV environment"
                             serviceURL = env.DEV_URL
@@ -46,10 +47,8 @@ if (params.InstanceURL.toString() == "DEV") {
                        //echo "${env.serviceURL}"
                     bat """
                         curl --location "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}" \
-                      //  --header "Accept: application/json" \
-                        --user ${env.USR}:${passwordHandler(env.PSW)} \
-                      //  --form "restDeployConfig={\\\"revisionId\\\": \\\"${params.Application_Version}\\\"}" \
-                        --form "file=@\\\"${params.IARFileName}\\\""
+-d "secret=$OAuth"\                 
+--form "file=@\\\"${params.IARFileName}\\\""
                     """
                 }
 			}
