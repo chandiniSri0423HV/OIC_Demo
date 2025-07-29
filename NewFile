@@ -27,19 +27,15 @@ pipeline {
         stage('Import Integration') {
             steps {
                 script {
-def Update_details(instance_selected) {
-    if (instance_selected.equals("DEV")) {
-     echo "inside update details-dev"
-        env.USR = env.DEV_Creds_USR
-        env.PSW = env.DEV_Creds_PSW
-        echo "${env.DEV_URL}"
-        env.serviceURL = env.DEV_URL
-        
-        env.testInstance = env.test_Integration_Instance 
-    }
-}
-                    Update_details((params.InstanceURL).toString())
-                    //echo "${env.serviceURL}"
+if (params.InstanceURL.toString() == "DEV") {
+                        echo "inside update details - DEV"
+                        env.USR = env.DEV_Creds_USR
+                        env.PSW = env.DEV_Creds_PSW
+                        env.serviceURL = env.DEV_URL
+                        env.testInstance = env.test_Integration_Instance
+                    }
+
+                    echo "${env.serviceURL}"
                     def selectedOption = "${params.Import_Method}".trim()
                     if (selectedOption == 'New') {
                         echo 'Adding new integration'
