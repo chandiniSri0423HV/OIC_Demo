@@ -32,11 +32,21 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
                     script {
-					 Update_details((params.Instance_URL).toString())
+					  def serviceURL = ""
+                        def testInstance = ""
+if (params.InstanceURL.toString() == "DEV") {
+                            echo "Using DEV environment"
+                            serviceURL = env.DEV_URL
+                            testInstance = env.test_Integration_Instance
+                        }
+						 def selectedOption = "${params.Import_Method}".trim()
+                        if (selectedOption == 'New') {
+						
+					// Update_details((params.InstanceURL).toString())
                        //echo "${env.serviceURL}"
                     bat """
-                        curl --location "${env.serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${env.testInstance}" \
-                        --header "Accept: application/json" \
+                        curl --location "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}" \
+                      //  --header "Accept: application/json" \
                         --user ${env.USR}:${passwordHandler(env.PSW)} \
                       //  --form "restDeployConfig={\\\"revisionId\\\": \\\"${params.Application_Version}\\\"}" \
                         --form "file=@\\\"${params.IARFileName}\\\""
@@ -50,4 +60,5 @@ pipeline {
                     }
                 }
             }
+			}
         
