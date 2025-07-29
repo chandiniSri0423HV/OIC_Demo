@@ -1,3 +1,25 @@
+def passwordHandler(String input) {
+   StringBuilder result = new StringBuilder()
+   for (int i = 0; i < input.length(); i++) {
+       if (input.charAt(i) == '%') {
+           result.append('%')
+       }
+       result.append(input.charAt(i))
+   }
+   return result.toString()
+}
+def Update_details(instance_selected) {
+    if (instance_selected.equals("DEV")) {
+     //echo "inside update details-dev"
+        env.USR = env.DEV_Creds_USR
+        env.PSW = env.DEV_Creds_PSW
+        //echo "${env.DEV_URL}"
+        env.serviceURL = env.DEV_URL
+env.testInstance = env.test_Integration_Instance
+        
+        
+    }
+}
 pipeline {
     agent any
 
@@ -6,37 +28,22 @@ pipeline {
     }
 
     stages {
-        stage('Set Environment') {
-            steps {
-                script {
-                    if (params.InstanceURL?.trim() == "DEV") {
-                        def creds = env.DEV_Creds.split(':')
-                        env.USR = creds[0]
-                        env.PSW = creds[1]
-                        env.serviceURL = env.DEV_URL
-                        env.testInstance = env.test_Integration_Instance
-                    } else {
-                        error "Unsupported environment: ${params.InstanceURL}"
-                    }
-                }
-            }
-        }
-
         stage('Import Integration') {
             steps {
                 script {
-                    if (params.Import_Method?.trim() == 'New') {
-                        echo 'Adding new integration...'
+Update_details((params.InstanceURL).toString())
+ //echo "${env.serviceURL}"
+                    def selectedOption = "${params.Import_Method}".trim()
+                    if (selectedOption == 'New') {
+                     echo 'Adding new integration'
 
                         def integURL = "${env.serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${env.testInstance}"
-                        def deployCmd = """curl --location "${integURL}" ^
---user ${env.USR}:${env.PSW} ^
---form "file=@\\"${params.IARFileName}\\"" """
+                        def integURL = "${env.serviceURL}/ic/api/integration/v1/integrations/archive"
+			//echo "${integURL}"
+                        def deployIntegCmd = "curl --location \"${integURL}\" --user ${env.USR}:${env.PSW} --form \"file=@\\\"${params.IARFileName}\\\"\""
+			bat(deployIntegCmd)
 
-                        bat label: 'Import Integration', script: deployCmd
-                    } else {
-                        echo "Import method '${params.Import_Method}' is not handled in this script."
-                    }
+                    } 
                 }
             }
         }
