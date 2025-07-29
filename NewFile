@@ -50,6 +50,6 @@ echo "${params.Import_Method}"
                     }
 }
 }
-}
+}}
 }
 }
