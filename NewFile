@@ -28,14 +28,15 @@ pipeline {
             steps {
                 script {
 if (params.InstanceURL.toString() == "DEV") {
-                        echo "inside update details - DEV"
-                        env.USR = env.DEV_Creds_USR
-                        env.PSW = env.DEV_Creds_PSW
-                        env.serviceURL = env.DEV_URL
-                        env.testInstance = env.test_Integration_Instance
+                        echo "Using DEV environment"
+                            env.serviceURL = env.DEV_URL
+                            env.testInstance = env.test_Integration_Instance
+                            env.USR = DEV_Creds_USR
+                            env.PSW = DEV_Creds_PSW
                     }
 
                     echo "${env.serviceURL}"
+echo "${params.Import_Method}"
                     def selectedOption = "${params.Import_Method}".trim()
                     if (selectedOption == 'New') {
                         echo 'Adding new integration'
