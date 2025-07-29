@@ -2,21 +2,21 @@ pipeline {
     agent any
 
     environment {
-        DEV_Creds = credentials('DEV_CredID')  // This should be a Jenkins credential (Username & Password)
+        DEV_Creds = credentials('DEV_CredID') // Jenkins credential (username/password)
     }
-
-   
 
     stages {
         stage('Set Environment') {
             steps {
                 script {
-                    def instance_selected = params.InstanceURL.trim()
-                    if (instance_selected == "DEV") {
-                        env.USR = env.DEV_Creds_USR
-                        env.PSW = env.DEV_Creds_PSW
+                    if (params.InstanceURL?.trim() == "DEV") {
+                        def creds = env.DEV_Creds.split(':')
+                        env.USR = creds[0]
+                        env.PSW = creds[1]
                         env.serviceURL = env.DEV_URL
                         env.testInstance = env.test_Integration_Instance
+                    } else {
+                        error "Unsupported environment: ${params.InstanceURL}"
                     }
                 }
             }
@@ -25,17 +25,17 @@ pipeline {
         stage('Import Integration') {
             steps {
                 script {
-                    def selectedOption = params.Import_Method.trim()
-                    if (selectedOption == 'New') {
-                        echo 'Adding new integration'
+                    if (params.Import_Method?.trim() == 'New') {
+                        echo 'Adding new integration...'
 
                         def integURL = "${env.serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${env.testInstance}"
-
-                        def deployIntegCmd = """curl --location "${integURL}" ^
+                        def deployCmd = """curl --location "${integURL}" ^
 --user ${env.USR}:${env.PSW} ^
---form "file=@\\"${params.IARFileName}\\""
-"""
-                        bat(label: 'Import Integration', script: deployIntegCmd)
+--form "file=@\\"${params.IARFileName}\\"" """
+
+                        bat label: 'Import Integration', script: deployCmd
+                    } else {
+                        echo "Import method '${params.Import_Method}' is not handled in this script."
                     }
                 }
             }
