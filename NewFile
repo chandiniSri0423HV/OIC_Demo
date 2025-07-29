@@ -1,56 +1,34 @@
-def passwordHandler(String input) {
-   StringBuilder result = new StringBuilder()
-   for (int i = 0; i < input.length(); i++) {
-       if (input.charAt(i) == '%') {
-           result.append('%')
-       }
-       result.append(input.charAt(i))
-   }
-   return result.toString()
-}
-
-
- 
-
 pipeline {
     agent any
-    //environment {
-//withCredentials([usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW')])
-   // }
-   /* parameters {
-        booleanParam(name: 'Activate_Integration', defaultValue: false, description: 'Check the box to activate the integration after importing')
-    }*/
-
- 
 
     stages {
         stage('Import Integration') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
+                    script {
+                        def serviceURL = ""
+                        def testInstance = ""
 
-                script {
-if (params.InstanceURL.toString() == "DEV") {
-                        echo "Using DEV environment"
-                           def serviceURL = env.DEV_URL
-                           def testInstance = env.test_Integration_Instance
-                       //   def USR = DEV_Creds_USR
-                         //  def PSW = DEV_Creds_PSW
+                        if (params.InstanceURL.toString() == "DEV") {
+                            echo "Using DEV environment"
+                            serviceURL = env.DEV_URL
+                            testInstance = env.test_Integration_Instance
+                        }
+
+                        echo "Service URL: ${serviceURL}"
+                        echo "Import Method: ${params.Import_Method}"
+
+                        def selectedOption = "${params.Import_Method}".trim()
+                        if (selectedOption == 'New') {
+                            echo 'Adding new integration'
+                            def integURL = "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}"
+                            echo "Integration URL: ${integURL}"
+                            def deployIntegCmd = "curl --location \"${integURL}\" --user ${USR}:${PSW} --form \"file=@\\\"${params.IARFileName}\\\"\""
+                            bat(deployIntegCmd)
+                        }
                     }
-
-                    echo "${env.serviceURL}"
-echo "${eserviceURL}"
-echo "${params.Import_Method}"
-                    def selectedOption = "${params.Import_Method}".trim()
-                    if (selectedOption == 'New') {
-                        echo 'Adding new integration'
-                        def integURL = "${serviceURL}/ic/api/integration/v1/integrations/archive??integrationInstance=${testInstance}"
-			echo "${integURL}"
-                        def deployIntegCmd = "curl --location \"${integURL}\" --user ${USR}:${PSW} --form \"file=@\\\"${params.IARFileName}\\\"\""
-			bat(deployIntegCmd)
-
-                    }
-}
-}
-}}
-}
+                }
+            }
+        }
+    }
 }
