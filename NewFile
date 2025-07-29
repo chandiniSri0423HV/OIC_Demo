@@ -12,18 +12,10 @@ def passwordHandler(String input) {
 pipeline {
     agent any
 
-    parameters {
-        string(name: 'InstanceURL', defaultValue: 'DEV', description: 'Target Instance (e.g., DEV)')
-        string(name: 'Import_Method', defaultValue: 'New', description: 'Import Method (New or Replace)')
-        string(name: 'IARFileName', defaultValue: 'ITEM_INTEGRATION_01.00.0000.iar', description: 'IAR file name')
-    }
-
     stages {
         stage('Import Integration') {
             steps {
-                withCredentials([
-                    usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW')
-                ]) {
+                withCredentials([usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
                     script {
                         def serviceURL = ""
                         def testInstance = ""
@@ -37,48 +29,34 @@ pipeline {
                         echo "Service URL: ${serviceURL}"
                         echo "Import Method: ${params.Import_Method}"
 
-                        // === Bearer Token Authentication (Client Credentials) Block ===
+                        // Insert Bearer token logic here
                         withCredentials([
-                            string(credentialsId: 'OIC_CLIENT_ID', variable: 'CLIENT_ID'),
-                            string(credentialsId: 'OIC_CLIENT_SECRET', variable: 'CLIENT_SECRET'),
-                            usernamePassword(credentialsId: 'OIC_USER_CRED', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD'),
-                            string(credentialsId: 'OIC_TOKEN_ENDPOINT', variable: 'TOKEN_URL')
+                            string(credentialsId: 'CLIENT_ID', variable: 'CLIENT_ID'),
+                            string(credentialsId: 'CLIENT_SECRET', variable: 'CLIENT_SECRET'),
+                            string(credentialsId: 'USERNAME', variable: 'USERNAME'),
+                            string(credentialsId: 'PASSWORD', variable: 'PASSWORD'),
+                            string(credentialsId: 'TOKEN_URL', variable: 'TOKEN_URL')
                         ]) {
-                            def getTokenCmd = """
-                            curl -s -X POST "${TOKEN_URL}" \\
-                            -H "Content-Type: application/x-www-form-urlencoded" \\
-                            -d "grant_type=password&username=${USERNAME}&password=${PASSWORD}&client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&scope=urn:opc:idm:__myscopes__"
-                            """
-                            def tokenResponse = bat(script: getTokenCmd, returnStdout: true).trim()
-                            def json = new groovy.json.JsonSlurper().parseText(tokenResponse)
-                            def bearerToken = json.access_token
+                            script {
+                                echo "Requesting Bearer token..."
+                                def getTokenCmd = "curl -s -X POST \"${TOKEN_URL}\" -H \"Content-Type: application/x-www-form-urlencoded\" -d \"grant_type=password&username=${USERNAME}&password=${PASSWORD}&client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&scope=urn:opc:idm:__myscopes__\""
+                                def tokenResponse = bat(script: getTokenCmd, returnStdout: true).trim()
+                                echo "Token Response: ${tokenResponse}"
 
-                            if (!bearerToken) {
-                                error "❌ Failed to fetch Bearer token. Check credentials or endpoint."
-                            }
-
-                            echo "✅ Bearer token retrieved."
-
-                            // Optionally call using Bearer token instead of basic auth
-                            if (params.Import_Method.trim() == 'New') {
-                                def integURL = "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}"
-                                echo "Integration URL (Bearer): ${integURL}"
-                                def deployBearerCmd = """
-                                curl --location --request POST "${integURL}" \\
-                                --header "Authorization: Bearer ${bearerToken}" \\
-                                --form "file=@\\\"${params.IARFileName}\\\""
-                                """
-                                bat(deployBearerCmd)
+                                def accessToken = new groovy.json.JsonSlurper().parseText(tokenResponse).access_token
+                                echo "Retrieved Bearer Token"
+                                
+                                // Store the token in env variable if needed
+                                env.BEARER_TOKEN = accessToken
                             }
                         }
 
-                        // === Original Basic Auth Block (Unchanged) ===
                         def selectedOption = "${params.Import_Method}".trim()
                         if (selectedOption == 'New') {
-                            echo 'Adding new integration (Basic Auth)'
+                            echo 'Adding new integration'
                             def integURL = "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}"
-                            echo "Integration URL (Basic): ${integURL}"
-                            def deployIntegCmd = "curl --location \"${integURL}\" --user ${USR}:${PSW} --form \"file=@\\\"${params.IARFileName}\\\"\""
+                            echo "Integration URL: ${integURL}"
+                            def deployIntegCmd = "curl --location \"${integURL}\" --header \"Authorization: Bearer ${env.BEARER_TOKEN}\" --form \"file=@\\\"${params.IARFileName}\\\"\""
                             bat(deployIntegCmd)
                         }
                     }
