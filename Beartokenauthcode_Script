@@ -13,7 +13,7 @@ pipeline {
                 withCredentials([string(credentialsId: 'Basic_Auth_Encoded', variable: 'ENCODED_AUTH')]) {
                     bat '''
                         @echo off
-                        setlocal ENABLEDELAYEDEXPANSION
+                        setlocal EnableDelayedExpansion
 
                         echo ==== Generate Bearer Token ====
                         curl -s --request POST "%TOKEN_URL%" ^
@@ -23,17 +23,13 @@ pipeline {
                           --data-urlencode "scope=%OIC_HOST%:443urn:opc:resource:consumer::all" ^
                           --insecure -o token.json
 
-                        echo ==== Extract Token (Simple) ====
+                        echo ==== Extract Token ====
                         for /f "tokens=2 delims=:" %%A in ('findstr "access_token" token.json') do (
-                            set raw=%%A
+                            set "raw=%%A"
+                            set "raw=!raw: =!"
+                            set "raw=!raw:~1,-2!"
+                            echo !raw! > token.txt
                         )
-
-                        rem Remove extra characters like quotes, comma, spaces
-                        set raw=!raw:~2!
-                        set raw=!raw:"=!
-                        set raw=!raw:,=!
-
-                        echo !raw! > token.txt
 
                         echo ====== Extracted Token ======
                         type token.txt
@@ -49,7 +45,7 @@ pipeline {
             steps {
                 bat '''
                     @echo off
-                    setlocal ENABLEDELAYEDEXPANSION
+                    setlocal EnableDelayedExpansion
 
                     echo ==== Read Bearer Token from file ====
                     set /p TOKEN=<token.txt
