@@ -21,7 +21,7 @@ pipeline {
                         --insecure -o token.json
 
                         echo ==== Extract Token ====
-                        for /f "tokens=2 delims=:\\\\" %%A in ('findstr "access_token" token.json') do echo %%A > token.txt
+                        for /f "tokens=2 delims=:\\" %%A in ('findstr "access_token" token.json') do echo %%A > token.txt
                         echo ====== Extracted Token ======
                         type token.txt
                         echo =================================
@@ -33,16 +33,22 @@ pipeline {
         stage('Import Integration Archive') {
             steps {
                 bat """
+                    @echo off
+                    setlocal ENABLEDELAYEDEXPANSION
+
                     echo ==== Read Bearer Token ====
                     set /p TOKEN=<token.txt
-                    echo ====== Using Token: %TOKEN% ======
+
+                    echo ====== Using Token: !TOKEN! ======
 
                     echo ==== Import Integration Archive ====
                     curl -X POST "%IMPORT_URL%" ^
-                    -H "Authorization: Bearer %TOKEN%" ^
+                    -H "Authorization: Bearer !TOKEN!" ^
                     -H "Content-Type: multipart/form-data" ^
                     -F "file=@ITEM_INTEGRATION_01.00.0002.iar" ^
                     --insecure
+
+                    endlocal
                 """
             }
         }
