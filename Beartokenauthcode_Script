@@ -1,59 +1,56 @@
 pipeline {
     agent any
-
     environment {
+        // Set your scope here (no spaces or special characters)
         OIC_SCOPE = 'https://59D040337868449CB0014B649FE827EC.integration.ocp.oraclecloud.com:443urn:opc:resource:consumer::all'
-        TOKEN_ENDPOINT = 'https://idcs-b0bf5647dbe34af4914cf420cba0294c.identity.oraclecloud.com/oauth2/v1/token'
     }
-
     stages {
-        stage('Checkout Repo') {
-            steps {
-                checkout scm
-            }
-        }
-
         stage('Generate Bearer Token') {
             steps {
-                withCredentials([string(credentialsId: 'Basic_Auth', variable: 'BASIC_AUTH')]) {
-                    bat """
-                    curl -s --request POST "%TOKEN_ENDPOINT%" ^
+                withCredentials([string(credentialsId: 'Basic_Auth_Encoded', variable: 'BASIC_AUTH')]) {
+                    bat '''
+                    echo 🔐 Requesting Token...
+
+                    curl -s --request POST "https://idcs-b0bf5647dbe34af4914cf420cba0294c.identity.oraclecloud.com/oauth2/v1/token" ^
                         --header "Authorization: Basic %BASIC_AUTH%" ^
                         --header "Content-Type: application/x-www-form-urlencoded" ^
                         --data-urlencode "grant_type=client_credentials" ^
                         --data-urlencode "scope=%OIC_SCOPE%" ^
                         --insecure -o token.json
 
-                    for /f "tokens=2 delims=:\\\" " %%A in ('findstr "access_token" token.json') do echo %%A > token.txt
-                    """
+                    REM Extract token from JSON
+                    for /f "tokens=2 delims=:\\" %%A in ('findstr "access_token" token.json') do echo %%A > token_raw.txt
+
+                    REM Remove trailing characters (quotes, braces, spaces)
+                    for /f %%A in (token_raw.txt) do set "TOKEN=%%~A"
+                    echo !TOKEN! > token.txt
+
+                    echo ✅ Bearer Token Saved to token.txt
+                    type token.txt
+                    '''
                 }
             }
         }
 
         stage('Import Integration') {
             steps {
-                script {
-                    def token = readFile('token.txt').trim()
-                    echo "Using Token: ${token.substring(0, 20)}..." // Only show first 20 characters
+                withCredentials([usernamePassword(credentialsId: 'DEV_Creds', usernameVariable: 'DEV_USER', passwordVariable: 'DEV_PASS')]) {
+                    bat '''
+                    set /p TOKEN=<token.txt
+                    echo 🔁 Starting Integration Import...
 
-                    bat """
-                    curl -X POST "https://your-oic-instance.integration.ocp.oraclecloud.com/ic/api/integration/v1/integrations/import" ^
-                        -H "Authorization: Bearer ${token}" ^
-                        -H "Content-Type: application/json" ^
-                        --data-binary "@YourIntegrationFile.json" ^
-                        --insecure
-                    """
+                    curl -X POST ^
+                        -u "%DEV_USER%:%DEV_PASS%" ^
+                        -H "Authorization: Bearer %TOKEN%" ^
+                        -H "Content-Type: multipart/form-data" ^
+                        -F "file=@ITEM_INTEGRATION_01.00.0002.iar" ^
+                        --insecure ^
+                        https://design.integration.us-ashburn-1.ocp.oraclecloud.com/ic/api/integration/v1/integrations/archive?integrationInstance=testinstance-idevjxz332qf-ia
+
+                    echo 🚀 Integration Import Completed
+                    '''
                 }
             }
-        }
-    }
-
-    post {
-        failure {
-            echo 'Pipeline failed!'
-        }
-        success {
-            echo 'Pipeline succeeded!'
         }
     }
 }
