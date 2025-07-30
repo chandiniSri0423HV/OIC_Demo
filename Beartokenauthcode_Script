@@ -3,60 +3,38 @@ pipeline {
 
     environment {
         OIC_HOST       = 'https://design.integration.us-ashburn-1.ocp.oraclecloud.com'
-        TOKEN_URL      = 'https://idcs-b0bf5647dbe34af4914cf420cba0294c.identity.oraclecloud.com/oauth2/v1/token'
-        INSTANCE_PARAM = '?integrationInstance=testinstance-idevjxz332qf-ia'
+        TOKEN_URL      = 'https://idcs-.../oauth2/v1/token'
+        INSTANCE_PARAM = '?integrationInstance=testinstance-xyz'
         ARCHIVE_FILE   = 'ITEM_INTEGRATION_01.00.0000.iar'
     }
 
     stages {
-        stage('Generate Bearer Token') {
+        stage('Get Token and Upload Integration') {
             steps {
                 withCredentials([string(credentialsId: 'Basic_Auth_Encoded', variable: 'ENCODED_AUTH')]) {
-                    powershell """
-                        Write-Host "==== Generate Bearer Token ===="
+                    bat """
+                        echo ==== Getting Bearer Token ====
 
-                        $headers = @{
-                            Authorization = "Basic $env:ENCODED_AUTH"
-                            "Content-Type" = "application/x-www-form-urlencoded"
-                        }
+                        curl -s --request POST "%TOKEN_URL%" ^
+                          --header "Authorization: Basic %ENCODED_AUTH%" ^
+                          --header "Content-Type: application/x-www-form-urlencoded" ^
+                          --data-urlencode "grant_type=client_credentials" ^
+                          --data-urlencode "scope=%OIC_HOST%:443urn:opc:resource:consumer::all" ^
+                          --insecure > token.json
 
-                        $body = @{
-                            grant_type = "client_credentials"
-                            scope      = "$env:OIC_HOST:443urn:opc:resource:consumer::all"
-                        }
+                        REM ==== Extract token using jq (must be installed) ====
+                        for /f %%i in ('jq -r ".access_token" token.json') do set TOKEN=%%i
 
-                        $response = Invoke-RestMethod -Uri "$env:TOKEN_URL" -Method Post -Headers $headers -Body $body -UseBasicParsing
+                        echo Bearer Token: %TOKEN%
 
-                        $token = $response.access_token
-                        Write-Host "==== Bearer Token Extracted ===="
-                        Write-Host $token
-                        Set-Content -Path "token.txt" -Value $token
+                        curl --location --request POST "%OIC_HOST%/ic/api/integration/v1/integrations/archive%INSTANCE_PARAM%" ^
+                          --header "Authorization: Bearer %TOKEN%" ^
+                          --header "Accept: application/json" ^
+                          --form "file=@%ARCHIVE_FILE%" ^
+                          --form "type=application/octet-stream" ^
+                          --insecure
                     """
                 }
-            }
-        }
-
-        stage('Import Integration Archive') {
-            steps {
-                powershell """
-                    Write-Host "==== Read Token from File and Import Integration ===="
-                    $token = Get-Content -Path "token.txt"
-
-                    $filePath = Join-Path $PWD "$env:ARCHIVE_FILE"
-
-                    $form = @{
-                        file = Get-Item -Path $filePath
-                        type = "application/octet-stream"
-                    }
-
-                    Invoke-WebRequest -Uri "$env:OIC_HOST/ic/api/integration/v1/integrations/archive$env:INSTANCE_PARAM" `
-                        -Method Post `
-                        -Headers @{ Authorization = "Bearer $token"; Accept = "application/json" } `
-                        -Form $form `
-                        -UseBasicParsing
-
-                    Write-Host "==== Integration Archive Imported Successfully ===="
-                """
             }
         }
     }
