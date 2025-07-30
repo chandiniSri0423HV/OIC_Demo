@@ -61,79 +61,79 @@ pipeline {
             }
         }
 
+       		
         stage('Import Connection') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'OAuth', variable: 'OAuth')]) {
-                        def serviceURL = ""
+					withCredentials([string(credentialsId: 'OAuth', variable: 'OAuth')]) {
+					 def serviceURL = ""
                         def testInstance = ""
+						if (params.InstanceURL.toString() == "DEV") {
+   // echo "Using DEV environment"
+    serviceURL = env.DEV_URL
+    testInstance = env.test_Integration_Instance
+}
+                    def csvFile = readFile(params.ConnectionProperties).trim()
+                    def records = csvFile.readLines().drop(1).collect { line -> line.tokenize(',') }
+                    records.each { record ->
+                        def field1 = record[0].trim()
+                        def field2 = record[1].trim()
+                        def field3 = record[2].trim()
+                        def field4 = record[3].trim()
 
-                        if (params.InstanceURL.toString() == "DEV") {
-                            serviceURL = env.DEV_URL
-                            testInstance = env.test_Integration_Instance
-                        }
+ 
 
-                        def csvFile = readFile(params.ConnectionProperties).trim()
-                        def records = csvFile.readLines().drop(1).collect { line -> line.tokenize(',') }
-
-                        records.each { record ->
-                            def field1 = record[0].trim()
-                            def field2 = record[1].trim()
-                            def field3 = record[2].trim()
-                            def field4 = record[3].trim()
-
-                            def conProperties = """
-                                { 
-                                    "connectionProperties": [{ 
-                                        "propertyGroup": "CONNECTION_PROPS",
-                                        "propertyName": "connectionUrl",
-                                        "propertyType": "URL",
-                                        "propertyValue": "${field1}"
-                                    }],
-                                    "securityPolicy": "BASIC_AUTH",
-                                    "securityProperties": [
-                                        {
-                                            "propertyGroup": "CREDENTIALS",
-                                            "propertyName": "username",
-                                            "propertyValue": "${field2}"
-                                        },
-                                        {
-                                            "propertyGroup": "CREDENTIALS",
-                                            "propertyName": "password",
-                                            "propertyValue": "${field3}"
-                                        }
-                                    ]
-                                }
-                            """
-                            def payload = conProperties.replace('\n', '').trim()
-                            writeFile file: 'payload.json', text: payload
-
-                            def selectedOption = "${params.Import_Method}".trim()
-                            if (selectedOption == 'New') {
-                                echo 'Adding new connection'
-                                bat """
-                                    curl -X POST ^
-                                    -H "Authorization: Bearer ${OAuth}" ^
-                                    -H "X-HTTP-Method-Override: PATCH" ^
-                                    -H "Content-Type: application/json" ^
-                                    -d @payload.json "${serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${testInstance}"
-                                """
-                                echo "New connection configured"
-                            } else if (selectedOption == 'Replace') {
-                                echo 'Replacing a connection'
-                                bat """
-                                    curl -X POST ^
-                                    -H "Authorization: Bearer ${OAuth}" ^
-                                    -H "X-HTTP-Method-Override: PATCH" ^
-                                    -H "Content-Type: application/json" ^
-                                    -d @payload.json "${serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${testInstance}"
-                                """
-                            } else {
-                                echo 'No import method is selected'
+                        def conProperties = """
+                            { 
+                                "connectionProperties": [{ 
+                                    "propertyGroup": "CONNECTION_PROPS",
+                                    "propertyName": "connectionUrl",
+                                    "propertyType": "URL",
+                                    "propertyValue": "${field1}"
+                                }],
+                                "securityPolicy": "BASIC_AUTH",
+                                "securityProperties": [
+                                    {
+                                        "propertyGroup": "CREDENTIALS",
+                                        "propertyName": "username",
+                                        "propertyValue": "${field2}"
+                                    },
+                                    {
+                                        "propertyGroup": "CREDENTIALS",
+                                        "propertyName": "password",
+                                        "propertyValue": "${field3}"
+                                    }
+                                ]
                             }
+                        """
+                        def payload = conProperties.replace('\n', '').trim()
+                        writeFile file: 'payload.json', text: payload
+                        def selectedOption = "${params.Import_Method}".trim()
+                        if (selectedOption == 'New') {
+                            echo 'Adding new connection'
+                            bat """
+curl -X POST ^
+  -H "Authorization: Bearer ${OAuth}" ^
+  -H "X-HTTP-Method-Override: PATCH" ^
+  -H "Content-Type: application/json" ^
+  -d @payload.json "${serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${testInstance}"
+"""
+                            echo "New connection configured"
+                        } else if (selectedOption == 'Replace') {
+                            echo 'Replacing a connection'
+                            bat """
+curl -X POST ^
+  -H "Authorization: Bearer ${OAuth}" ^
+  -H "X-HTTP-Method-Override: PATCH" ^
+  -H "Content-Type: application/json" ^
+  -d @payload.json "${serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${testInstance}"
+"""
+                        } else {
+                            echo 'No import method is selected'
                         }
                     }
                 }
+			}
             }
         }
 
