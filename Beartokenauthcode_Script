@@ -13,18 +13,17 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'Basic_Auth_Encoded', variable: 'ENCODED_AUTH')]) {
                     bat """
-                        echo ==== Request Bearer Token ====
+                        echo ==== Generate Bearer Token ====
                         curl -s --request POST "%TOKEN_URL%" ^
-                            --header "Authorization: Basic %ENCODED_AUTH%" ^
-                            --header "Content-Type: application/x-www-form-urlencoded" ^
-                            --data-urlencode "grant_type=client_credentials" ^
-                            --data-urlencode "scope=%OIC_HOST%:443urn:opc:resource:consumer::all" ^
-                            --insecure -o token.json
+                        --header "Authorization: Basic %ENCODED_AUTH%" ^
+                        --header "Content-Type: application/x-www-form-urlencoded" ^
+                        --data-urlencode "grant_type=client_credentials" ^
+                        --data-urlencode "scope=%OIC_HOST%:443urn:opc:resource:consumer::all" ^
+                        --insecure -o token.json
 
-                        echo ==== Extract Bearer Token using PowerShell ====
-                        powershell -Command "$json = Get-Content -Raw -Path 'token.json' | ConvertFrom-Json; $json.access_token | Out-File -FilePath 'token.txt' -Encoding ASCII"
-
-                        echo ====== Bearer Token Saved to token.txt ======
+                        echo ==== Extract Bearer Token ====
+                        for /f "tokens=2 delims=:\\\\\\\" " %%A in ('findstr "access_token" token.json') do echo %%A > token.txt
+                        echo ====== Bearer Token Extracted ======
                         type token.txt
                     """
                 }
@@ -34,15 +33,16 @@ pipeline {
         stage('Import Integration Archive') {
             steps {
                 bat """
-                    for /f %%i in (token.txt) do set BEARER_TOKEN=%%i
+                    set /p BEARER_TOKEN=<token.txt
 
-                    echo ====== Importing Integration ======
+                    echo ====== Starting Import Integration with Token ======
+
                     curl --location --request POST "%OIC_HOST%/ic/api/integration/v1/integrations/archive%INSTANCE_PARAM%" ^
-                        --header "Authorization: Bearer %BEARER_TOKEN%" ^
-                        --header "Accept: application/json" ^
-                        --form "file=@%ARCHIVE_FILE%" ^
-                        --form "type=application/octet-stream" ^
-                        --insecure
+                    --header "Authorization: Bearer %BEARER_TOKEN%" ^
+                    --header "Accept: application/json" ^
+                    --form "file=@%ARCHIVE_FILE%" ^
+                    --form "type=application/octet-stream" ^
+                    --insecure
                 """
             }
         }
