@@ -23,15 +23,17 @@ pipeline {
                           --data-urlencode "scope=%OIC_HOST%:443urn:opc:resource:consumer::all" ^
                           --insecure -o token.json
 
-                        echo ==== Extract Token ====
+                        echo ==== Extract Token (Simple) ====
                         for /f "tokens=2 delims=:" %%A in ('findstr "access_token" token.json') do (
-                            set line=%%A
-                            set line=!line:~2!
-                            for /f "delims=\\\"," %%B in ("!line!") do (
-                                set TOKEN=%%B
-                                echo !TOKEN! > token.txt
-                            )
+                            set raw=%%A
                         )
+
+                        rem Remove extra characters like quotes, comma, spaces
+                        set raw=!raw:~2!
+                        set raw=!raw:"=!
+                        set raw=!raw:,=!
+
+                        echo !raw! > token.txt
 
                         echo ====== Extracted Token ======
                         type token.txt
