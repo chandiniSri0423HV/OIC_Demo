@@ -183,5 +183,33 @@ pipeline {
                 }
             }
         }
+		
+		stage('Activation of Integration') {
+            steps {
+                script {
+                    def integName = params.Integration_Identifier.toString()
+                    if (params.Activate_Integration) {
+                        echo 'Checkbox is checked'
+                        bat """
+                                curl --location "${serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${testInstance}" ^
+                                --header "Authorization: Bearer ${OAuth}" ^
+                                --header "Content-Type: application/json" ^
+                                --header "X-HTTP-Method-Override: PATCH" ^
+                                --data "{\\"status\\":\\"ACTIVATED\\"}"
+                            """
+                        echo "Integration Activated"
+                    } else {
+                        echo 'Checkbox is not checked'
+                        bat """
+                                curl --location "${serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${testInstance}" ^
+                                --header "Authorization: Bearer ${OAuth}" ^
+                                --header "Content-Type: application/json" ^
+                                --header "X-HTTP-Method-Override: PATCH" ^
+                                --data "{\\"status\\":\\"CONFIGURED\\"}"
+                            """
+                    }
+                }
+            }
+        }
     }
 }
