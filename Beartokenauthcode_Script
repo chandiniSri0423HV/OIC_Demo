@@ -12,7 +12,7 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'Basic_Auth_Encoded', variable: 'ENCODED_AUTH')]) {
                     bat """
-                        rem -- Step 1: Generate token
+                        echo ==== Generate Bearer Token ====
                         curl -s --request POST "%TOKEN_URL%" ^
                         --header "Authorization: Basic %ENCODED_AUTH%" ^
                         --header "Content-Type: application/x-www-form-urlencoded" ^
@@ -20,12 +20,11 @@ pipeline {
                         --data-urlencode "scope=%OIC_HOST%:443urn:opc:resource:consumer::all" ^
                         --insecure -o token.json
 
-                        rem -- Step 2: Extract access_token into token.txt
-                        for /f "tokens=2 delims=:\\\" " %%A in ('findstr "access_token" token.json') do echo %%A > token.txt
-
-                        echo ===== Bearer Token =====
+                        echo ==== Extract Token ====
+                        for /f "tokens=2 delims=:\\\\\\\" " %%A in ('findstr "access_token" token.json') do echo %%A > token.txt
+                        echo ====== Extracted Token ======
                         type token.txt
-                        echo ========================
+                        echo =================================
                     """
                 }
             }
@@ -33,19 +32,14 @@ pipeline {
 
         stage('Import Integration Archive') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'DEV_Creds', usernameVariable: 'OIC_USER', passwordVariable: 'OIC_PASS')]) {
-                    bat """
-                        rem -- Read token into variable
-                        set /p BEARER_TOKEN=<token.txt
-
-                        rem -- Execute the import integration API
-                        curl -X POST "%OIC_HOST%/ic/api/integration/v1/integrations/archive%INSTANCE_PARAM%" ^
-                        -H "Authorization: Bearer %BEARER_TOKEN%" ^
-                        -H "Content-Type: multipart/form-data" ^
-                        -F "file=@ITEM_INTEGRATION_01.00.0002.iar" ^
-                        --insecure
-                    """
-                }
+                bat """
+                    set /p BEARER_TOKEN=<token.txt
+                    curl -X POST "%OIC_HOST%/ic/api/integration/v1/integrations/archive%INSTANCE_PARAM%" ^
+                    -H "Authorization: Bearer %BEARER_TOKEN%" ^
+                    -H "Content-Type: multipart/form-data" ^
+                    -F "file=@ITEM_INTEGRATION_01.00.0002.iar" ^
+                    --insecure
+                """
             }
         }
     }
