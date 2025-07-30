@@ -1,46 +1,68 @@
+def passwordHandler(String input) {
+   StringBuilder result = new StringBuilder()
+   for (int i = 0; i < input.length(); i++) {
+       if (input.charAt(i) == '%') {
+           result.append('%')
+       }
+       result.append(input.charAt(i))
+   }
+   return result.toString()
+}
+
+def Update_details(instance_selected) {
+    if (instance_selected.equals("DEV")) {
+        env.USR = env.DEV_Creds_USR
+        env.PSW = env.DEV_Creds_PSW
+        env.serviceURL = env.DEV_URL
+    }
+}
+
 pipeline {
     agent any
     environment {
         DEV_Creds = credentials('DEV_CredID')
     }
     parameters {
-        string(name: 'InstanceURL', defaultValue: 'DEV')
-        string(name: 'IARFileName', defaultValue: '')
-        string(name: 'Import_Method', defaultValue: 'New') // or 'Replace'
-        string(name: 'Integration_Identifier', defaultValue: '')
-        string(name: 'ConnectionProperties', defaultValue: '')
-        string(name: 'FileNames', defaultValue: '') // Comma separated lookup file names
-        booleanParam(name: 'Activate_Integration', defaultValue: false, description: 'Check to activate the integration after import')
+        booleanParam(name: 'Activate_Integration', defaultValue: false, description: 'Check the box to activate the integration after importing')
     }
+
     stages {
+
         stage('Import Integration') {
             steps {
                 script {
                     Update_details((params.InstanceURL).toString())
                     def selectedOption = "${params.Import_Method}".trim()
-                    def integURL = "${env.serviceURL}/ic/api/integration/v1/integrations/archive"
-                    withCredentials([string(credentialsId: 'OAuth', variable: 'OAuth')]) {
-                        if (selectedOption == 'New') {
-                            echo 'Adding new integration'
-                            bat """
-                                curl --location --request POST "${integURL}?integrationInstance=${env.test_Integration_Instance}" ^
-                                --header "Authorization: Bearer ${OAuth}" ^
-                                --header "Accept: application/json" ^
-                                --form "file=@${params.IARFileName}" ^
-                                --form "type=application/octet-stream"
-                            """
-                        } else if (selectedOption == 'Replace') {
-                            echo 'Replacing an integration'
-                            bat """
-                                curl --location --request PUT "${integURL}?integrationInstance=${env.test_Integration_Instance}" ^
-                                --header "Authorization: Bearer ${OAuth}" ^
-                                --header "Accept: application/json" ^
-                                --form "file=@${params.IARFileName}" ^
-                                --form "type=application/octet-stream"
-                            """
-                        } else {
-                            echo 'No valid import method selected'
-                        }
+                    def integName = params.Integration_Identifier.toString()
+
+                    if (selectedOption == 'New') {
+                        echo 'Adding new integration'
+                        bat """
+                            curl --location --request POST "${env.serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${env.test_Integration_Instance}" ^
+                            --header "Authorization: Bearer ${OAuth}" ^
+                            --header "Accept: application/json" ^
+                            --form "file=@\\"${params.IARFileName}\\"" ^
+                            --form "type=application/octet-stream"
+                        """
+                    } else if (selectedOption == 'Replace') {
+                        echo 'Replacing an integration'
+                        bat """
+                            curl --location --request POST "${env.serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${env.test_Integration_Instance}" ^
+                            --header "Authorization: Bearer ${OAuth}" ^
+                            --header "Content-Type: application/json" ^
+                            --header "X-HTTP-Method-Override: PATCH" ^
+                            --data-binary @Deactivate.json
+                        """
+
+                        bat """
+                            curl --location --request PUT "${env.serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${env.test_Integration_Instance}" ^
+                            --header "Authorization: Bearer ${OAuth}" ^
+                            --header "Accept: application/json" ^
+                            --form "file=@\\"${params.IARFileName}\\"" ^
+                            --form "type=application/octet-stream"
+                        """
+                    } else {
+                        echo 'No import method is selected'
                     }
                 }
             }
@@ -50,17 +72,17 @@ pipeline {
             steps {
                 script {
                     def csvFile = readFile(params.ConnectionProperties).trim()
-                    def records = csvFile.readLines().drop(1).collect { it.tokenize(',') }
-                    withCredentials([string(credentialsId: 'OAuth', variable: 'OAuth')]) {
-                        records.each { record ->
-                            def field1 = record[0]
-                            def field2 = record[1]
-                            def field3 = record[2]
-                            def field4 = record[3]
+                    def records = csvFile.readLines().drop(1).collect { line -> line.tokenize(',') }
 
-                            def conProperties = """
-                            { 
-                                "connectionProperties": { 
+                    records.each { record ->
+                        def field1 = record[0]
+                        def field2 = record[1]
+                        def field3 = record[2]
+                        def field4 = record[3]
+
+                        def conProperties = """
+                            {
+                                "connectionProperties": {
                                     "propertyGroup": "CONNECTION_PROPS",
                                     "propertyName": "connectionUrl",
                                     "propertyType": "URL",
@@ -80,18 +102,19 @@ pipeline {
                                     }
                                 ]
                             }
-                            """
-                            writeFile file: 'payload.json', text: conProperties.replace('\n', '').trim()
-                            def selectedOption = "${params.Import_Method}".trim()
-                            echo "Configuring connection ${field4}"
-                            bat """
-                                curl -X POST -H "Authorization: Bearer ${OAuth}" ^
-                                -H "X-HTTP-Method-Override:PATCH" ^
-                                -H "Content-Type:application/json" ^
-                                --data-binary @payload.json ^
-                                "${env.serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${env.test_Integration_Instance}"
-                            """
-                        }
+                        """
+                        def payload = conProperties.replace('\n', '').trim()
+                        writeFile file: 'payload.json', text: payload
+
+                        echo 'Configuring connection'
+                        bat """
+                            curl -X POST ^
+                            -H "Authorization: Bearer ${OAuth}" ^
+                            -H "X-HTTP-Method-Override:PATCH" ^
+                            -H "Content-Type:application/json" ^
+                            --data-binary @payload.json ^
+                            "${env.serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${env.test_Integration_Instance}"
+                        """
                     }
                 }
             }
@@ -102,26 +125,19 @@ pipeline {
                 script {
                     def files = params.FileNames.split(',')
                     def selectedOption = params.Import_Method.trim()
-                    withCredentials([string(credentialsId: 'OAuth', variable: 'OAuth')]) {
-                        files.each { fileName ->
-                            fileName = fileName.trim()
-                            if (fileName) {
-                                if (selectedOption == 'New') {
-                                    echo "Adding new lookup: ${fileName}"
-                                    bat """
-                                        curl -X POST -H "Authorization: Bearer ${OAuth}" ^
-                                        -F "file=@${fileName}" -F "type=application/octet-stream" ^
-                                        "${env.serviceURL}/ic/api/integration/v1/lookups/archive?integrationInstance=${env.test_Integration_Instance}"
-                                    """
-                                } else if (selectedOption == 'Replace') {
-                                    echo "Replacing lookup: ${fileName}"
-                                    bat """
-                                        curl -X PUT -H "Authorization: Bearer ${OAuth}" ^
-                                        -F "file=@${fileName}" -F "type=application/octet-stream" ^
-                                        "${env.serviceURL}/ic/api/integration/v1/lookups/archive?integrationInstance=${env.test_Integration_Instance}"
-                                    """
-                                }
-                            }
+
+                    files.each { fileName ->
+                        fileName = fileName.trim()
+                        if (fileName) {
+                            def method = (selectedOption == 'Replace') ? 'PUT' : 'POST'
+                            echo "${selectedOption == 'Replace' ? 'Replacing' : 'Adding'} lookup"
+                            bat """
+                                curl -X ${method} ^
+                                -H "Authorization: Bearer ${OAuth}" ^
+                                -F "file=@${fileName}" ^
+                                -F "type=application/octet-stream" ^
+                                "${env.serviceURL}/ic/api/integration/v1/lookups/archive?integrationInstance=${env.test_Integration_Instance}"
+                            """
                         }
                     }
                 }
@@ -132,26 +148,26 @@ pipeline {
             steps {
                 script {
                     def integName = params.Integration_Identifier.toString()
-                    withCredentials([string(credentialsId: 'OAuth', variable: 'OAuth')]) {
-                        if (params.Activate_Integration) {
-                            echo "Activating integration: ${integName}"
-                            bat """
-                                curl -X POST -H "Authorization: Bearer ${OAuth}" ^
-                                -H "Content-Type: application/json" ^
-                                -H "X-HTTP-Method-Override: PATCH" ^
-                                -d "@Activate.json" ^
-                                "${env.serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${env.test_Integration_Instance}"
-                            """
-                        } else {
-                            echo "Deactivating integration: ${integName}"
-                            bat """
-                                curl -X POST -H "Authorization: Bearer ${OAuth}" ^
-                                -H "Content-Type: application/json" ^
-                                -H "X-HTTP-Method-Override: PATCH" ^
-                                -d "@Deactivate.json" ^
-                                "${env.serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${env.test_Integration_Instance}"
-                            """
-                        }
+                    if (params.Activate_Integration) {
+                        echo 'Activating Integration'
+                        bat """
+                            curl -X POST ^
+                            -H "Authorization: Bearer ${OAuth}" ^
+                            -H "Content-Type: application/json" ^
+                            -H "X-HTTP-Method-Override: PATCH" ^
+                            -d @Activate.json ^
+                            "${env.serviceURL}/ic/api/integration/v1/integrations/${passwordHandler(integName)}?integrationInstance=${env.test_Integration_Instance}"
+                        """
+                    } else {
+                        echo 'Deactivating Integration'
+                        bat """
+                            curl -X POST ^
+                            -H "Authorization: Bearer ${OAuth}" ^
+                            -H "Content-Type: application/json" ^
+                            -H "X-HTTP-Method-Override: PATCH" ^
+                            -d @Deactivate.json ^
+                            "${env.serviceURL}/ic/api/integration/v1/integrations/${passwordHandler(integName)}?integrationInstance=${env.test_Integration_Instance}"
+                        """
                     }
                 }
             }
