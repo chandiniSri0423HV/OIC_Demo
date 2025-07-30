@@ -23,6 +23,7 @@ pipeline {
 
                         echo ==== Extract Bearer Token using PowerShell ====
                         powershell -Command "$json = Get-Content -Raw -Path 'token.json' | ConvertFrom-Json; $json.access_token | Out-File -FilePath 'token.txt' -Encoding ASCII"
+
                         echo ====== Bearer Token Saved to token.txt ======
                         type token.txt
                     """
@@ -33,9 +34,9 @@ pipeline {
         stage('Import Integration Archive') {
             steps {
                 bat """
-                    set /p BEARER_TOKEN=<token.txt
+                    for /f %%i in (token.txt) do set BEARER_TOKEN=%%i
 
-                    echo ====== Import Integration Archive ======
+                    echo ====== Importing Integration ======
                     curl --location --request POST "%OIC_HOST%/ic/api/integration/v1/integrations/archive%INSTANCE_PARAM%" ^
                         --header "Authorization: Bearer %BEARER_TOKEN%" ^
                         --header "Accept: application/json" ^
