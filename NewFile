@@ -57,18 +57,19 @@ pipeline {
 							echo 'Replacing an integration'
 							def integName = params.Integration_Identifier.toString()
 							bat """
-                                curl --location "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}" ^
-                                --header "Authorization: Bearer ${OAuth}" ^
-                                --form "file=@\\"${params.IARFileName}\\""
-                            """
-							echo 'Deactivated Integration to be Replaced'
-							bat """
 								curl --header "Authorization: Bearer ${OAuth}" ^
 								--header "Content-Type: application/json" ^
 								--header "X-HTTP-Method-Override: PATCH" ^
 								--data @Activate.json ^
 								--location "${serviceURL}/ic/api/integration/v1/integrations/${integName}"
 							"""
+							echo 'Deactivated Integration to be Replaced'
+							
+							bat """
+                                curl --location "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}" ^
+                                --header "Authorization: Bearer ${OAuth}" ^
+                                --form "file=@\\"${params.IARFileName}\\""
+                            """
 							echo 'Integration Replaced'
 							
                     } else {
