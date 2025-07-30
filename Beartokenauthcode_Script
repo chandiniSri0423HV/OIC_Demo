@@ -23,11 +23,8 @@ pipeline {
                           --data-urlencode "scope=%OIC_HOST%:443urn:opc:resource:consumer::all" ^
                           --insecure > token.json
 
-                        for /f "tokens=2 delims=:" %%A in ('findstr "access_token" token.json') do (
-                            set "TOKEN=%%~A"
-                        )
+                        for /f %%i in ('powershell -Command "(Get-Content token.json | Out-String | ConvertFrom-Json).access_token"') do set TOKEN=%%i
 
-                        set TOKEN=%TOKEN:"=%
                         echo Extracted Bearer Token: %TOKEN%
 
                         echo Importing Integration Archive...
