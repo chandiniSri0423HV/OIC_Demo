@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        OIC_HOST       = 'https://design.integration.us-ashburn-1.ocp.oraclecloud.com'
-        TOKEN_URL      = 'https://idcs-b0bf5647dbe34af4914cf420cba0294c.identity.oraclecloud.com/oauth2/v1/token'
-        INSTANCE_PARAM = '?integrationInstance=testinstance-idevjxz332qf-ia'
+        OIC_HOST = 'https://design.integration.us-ashburn-1.ocp.oraclecloud.com'
+        TOKEN_URL = 'https://idcs-b0bf5647dbe34af4914cf420cba0294c.identity.oraclecloud.com/oauth2/v1/token'
+        IMPORT_URL = 'https://design.integration.us-ashburn-1.ocp.oraclecloud.com/ic/api/integration/v1/integrations/archive?integrationInstance=testinstance-idevjxz332qf-ia'
     }
 
     stages {
@@ -21,7 +21,7 @@ pipeline {
                         --insecure -o token.json
 
                         echo ==== Extract Token ====
-                        for /f "tokens=2 delims=:\\\\\\\" " %%A in ('findstr "access_token" token.json') do echo %%A > token.txt
+                        for /f "tokens=2 delims=:\\\\" %%A in ('findstr "access_token" token.json') do echo %%A > token.txt
                         echo ====== Extracted Token ======
                         type token.txt
                         echo =================================
@@ -33,9 +33,13 @@ pipeline {
         stage('Import Integration Archive') {
             steps {
                 bat """
-                    set /p BEARER_TOKEN=<token.txt
-                    curl -X POST "%OIC_HOST%/ic/api/integration/v1/integrations/archive%INSTANCE_PARAM%" ^
-                    -H "Authorization: Bearer %BEARER_TOKEN%" ^
+                    echo ==== Read Bearer Token ====
+                    set /p TOKEN=<token.txt
+                    echo ====== Using Token: %TOKEN% ======
+
+                    echo ==== Import Integration Archive ====
+                    curl -X POST "%IMPORT_URL%" ^
+                    -H "Authorization: Bearer %TOKEN%" ^
                     -H "Content-Type: multipart/form-data" ^
                     -F "file=@ITEM_INTEGRATION_01.00.0002.iar" ^
                     --insecure
