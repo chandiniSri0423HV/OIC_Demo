@@ -39,7 +39,59 @@ pipeline {
                     set /p TOKEN=<token.txt
                     echo 🔁 Starting Integration Import...
 
-                    curl -X POST ^
+                    curl -X POST ^pipeline {
+    agent any
+
+    environment {
+        OIC_HOST = 'https://59D040337868449CB0014B649FE827EC.integration.ocp.oraclecloud.com'
+        TOKEN_URL = 'https://idcs-b0bf5647dbe34af4914cf420cba0294c.identity.oraclecloud.com/oauth2/v1/token'
+    }
+
+    stages {
+        stage('Generate Bearer Token') {
+            steps {
+                withCredentials([string(credentialsId: 'Basic_Auth_Encoded', variable: 'ENCODED_AUTH')]) {
+                    bat """
+                        curl -s --request POST "%TOKEN_URL%" ^
+                        --header "Authorization: Basic %ENCODED_AUTH%" ^
+                        --header "Content-Type: application/x-www-form-urlencoded" ^
+                        --data-urlencode "grant_type=client_credentials" ^
+                        --data-urlencode "scope=%OIC_HOST%:443urn:opc:resource:consumer::all" ^
+                        --insecure -o token.json
+
+                        for /f "tokens=2 delims=:\\\" " %%A in ('findstr "access_token" token.json') do echo %%A > token.txt
+
+                        echo --------------------
+                        echo Extracted Token:
+                        type token.txt
+                        echo --------------------
+                    """
+                }
+            }
+        }
+
+        stage('Import Integration') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'DEV_Creds', usernameVariable: 'OIC_USER', passwordVariable: 'OIC_PASS')]) {
+                    bat """
+                        set /p BEARER_TOKEN=<token.txt
+                        echo Calling importIntegration with token: %BEARER_TOKEN%
+
+                        curl -X POST "%OIC_HOST%/icsapis/v2/integrations/import" ^
+                        -H "Authorization: Bearer %BEARER_TOKEN%" ^
+                        -H "Content-Type: multipart/form-data" ^
+                        -F "file=@ITEM_INTEGRATION_01.00.0002.iar" ^
+                        -u %OIC_USER%:%OIC_PASS% ^
+                        --insecure
+                    """
+                }
+            }
+        }
+
+        // Add more stages for connection import, lookup replace, etc. similarly
+    }
+}
+
                         -u "%DEV_USER%:%DEV_PASS%" ^
                         -H "Authorization: Bearer %TOKEN%" ^
                         -H "Content-Type: multipart/form-data" ^
