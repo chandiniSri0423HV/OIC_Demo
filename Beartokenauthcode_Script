@@ -22,11 +22,13 @@ pipeline {
                         --insecure -o token.json
 
                         echo ==== Extract Bearer Token ====
+                        setlocal EnableDelayedExpansion
                         for /f "tokens=2 delims=:" %%A in ('findstr "access_token" token.json') do (
                             set "LINE=%%A"
-                            call set "TOKEN=%%LINE:~2,-2%%"
+                            set "LINE=!LINE:~2,-2!"
+                            echo !LINE! > token.txt
                         )
-                        echo !TOKEN! > token.txt
+                        endlocal
 
                         echo ====== Bearer Token Extracted ======
                         type token.txt
