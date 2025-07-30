@@ -32,25 +32,21 @@ pipeline {
         stage('Generate Bearer Token') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'CLIENT_ID', variable: 'CLIENT_ID'),
-                                     string(credentialsId: 'CLIENT_SECRET', variable: 'CLIENT_SECRET')]) {
-
-                        // Use bat to generate the token and extract it into a file
-                        bat """
+                    withCredentials([string(credentialsId: 'OAuthBasic', variable: 'BASIC_AUTH')]) {
+                        bat '''
                             curl -s "https://idcs-b0bf5647dbe34af4914cf420cba0294c.identity.oraclecloud.com/oauth2/v1/token" ^
-                            --header "Authorization: Basic ${CLIENT_ID}:${CLIENT_SECRET}" ^
+                            --header "Authorization: Basic %BASIC_AUTH%" ^
                             --header "Content-Type: application/x-www-form-urlencoded" ^
                             --data-urlencode "grant_type=client_credentials" ^
                             --data-urlencode "scope=https://59D040337868449CB0014B649FE827EC.integration.ocp.oraclecloud.com:443urn:opc:resource:consumer::all" ^
                             --insecure -o token.json
 
-                            for /f "tokens=2 delims=:\\" %%A in ('findstr "access_token" token.json') do (
+                            for /f "tokens=2 delims=:\\\"," %%A in ('findstr "access_token" token.json') do (
                                 echo %%~A > token.txt
                             )
-                        """
-
-                        // Read the token from file into env variable
+                        '''
                         env.OAUTH_TOKEN = readFile('token.txt').trim()
+                        echo "Bearer token fetched successfully"
                     }
                 }
             }
@@ -73,7 +69,9 @@ pipeline {
                         bat """
                             curl --location "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}" ^
                             --header "Authorization: Bearer ${env.OAUTH_TOKEN}" ^
-                            --form "file=@\\"${params.IARFileName}\\""
+                            --header "Accept: application/json" ^
+                            --form "file=@\\"${params.IARFileName}\\"" ^
+                            --form "type=application/octet-stream"
                         """
                     }
                 }
