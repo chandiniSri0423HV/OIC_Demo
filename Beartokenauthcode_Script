@@ -13,7 +13,9 @@ pipeline {
                 withCredentials([string(credentialsId: 'Basic_Auth_Encoded', variable: 'ENCODED_AUTH')]) {
                     bat '''
                         @echo off
+                        setlocal ENABLEDELAYEDEXPANSION
                         echo ==== Generate Bearer Token ====
+                        
                         curl -s --request POST "%TOKEN_URL%" ^
                           --header "Authorization: Basic %ENCODED_AUTH%" ^
                           --header "Content-Type: application/x-www-form-urlencoded" ^
@@ -22,15 +24,16 @@ pipeline {
                           --insecure -o token.json
 
                         echo ==== Extract Token ====
-                        for /f "tokens=2 delims=:" %%A in ('findstr "access_token" token.json') do (
-                            set "RAW=%%A"
-                            call set "TOKEN=%%RAW:~2,-2%%"
+                        for /f "tokens=2 delims=:," %%A in ('findstr "access_token" token.json') do (
+                            set "RAW=%%~A"
+                            set "RAW=!RAW:~1,-1!"
+                            echo !RAW! > token.txt
                         )
-                        echo !TOKEN! > token.txt
 
                         echo ====== Extracted Token ======
                         type token.txt
                         echo =================================
+                        endlocal
                     '''
                 }
             }
@@ -44,7 +47,6 @@ pipeline {
 
                     echo ==== Read Bearer Token ====
                     set /p TOKEN=<token.txt
-
                     echo ====== Using Token: !TOKEN! ======
 
                     echo ==== Import Integration Archive ====
