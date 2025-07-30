@@ -163,6 +163,11 @@ curl -X POST ^
 				withCredentials([string(credentialsId: 'OAuth', variable: 'OAuth')]) {
 					 def serviceURL = ""
                         def testInstance = ""
+						if (params.InstanceURL.toString() == "DEV") {
+   // echo "Using DEV environment"
+    serviceURL = env.DEV_URL
+    testInstance = env.test_Integration_Instance
+}
                     def files = params.Lookup_FileNames.split(',')
                     def selectedOption = params.Import_Method.trim()
 
