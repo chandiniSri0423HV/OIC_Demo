@@ -32,8 +32,8 @@ pipeline {
         stage('Generate Bearer Token') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'client_id', variable: 'CLIENT_ID'),
-                                     string(credentialsId: 'client_secret', variable: 'CLIENT_SECRET')]) {
+                    withCredentials([string(credentialsId: 'CLIENT_ID', variable: 'CLIENT_ID'),
+                                     string(credentialsId: 'CLIENT_SECRET', variable: 'CLIENT_SECRET')]) {
 
                         // Use bat to generate the token and extract it into a file
                         bat """
