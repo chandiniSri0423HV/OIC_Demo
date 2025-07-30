@@ -52,26 +52,28 @@ pipeline {
                                 --header "Authorization: Bearer ${OAuth}" ^
                                 --form "file=@\\"${params.IARFileName}\\""
                             """
-                        } else if (selectedOption == 'Replace') {
-                            echo 'Replacing an integration'
-                            def integName = params.Integration_Identifier.toString()
-                            bat """
+                        }
+						else if (selectedOption == 'Replace') {
+							echo 'Replacing an integration'
+							def integName = params.Integration_Identifier.toString()
+							bat """
                                 curl --location "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}" ^
                                 --header "Authorization: Bearer ${OAuth}" ^
                                 --form "file=@\\"${params.IARFileName}\\""
                             """
-                            echo 'Deactivated Integration to be Replaced'
-                            bat """
-                                curl --header "Authorization: Bearer ${OAuth}" ^
-                                --header "Content-Type: application/json" ^
-                                --header "X-HTTP-Method-Override: PATCH" ^
-                                --data @Activate.json ^
-                                --location "${env.serviceURL}/ic/api/integration/v1/integrations/${integName}"
-                            """
-                            echo 'Integration Replaced'
-                        } else {
-                            echo 'No import method is selected'
-                        }
+							echo 'Deactivated Integration to be Replaced'
+							bat """
+								curl --header "Authorization: Bearer ${OAuth}" ^
+								--header "Content-Type: application/json" ^
+								--header "X-HTTP-Method-Override: PATCH" ^
+								--data @Activate.json ^
+								--location "${serviceURL}/ic/api/integration/v1/integrations/${integName}"
+							"""
+							echo 'Integration Replaced'
+							
+                    } else {
+                        echo 'No import method is selected'
+                    }
                     }
                 }
             }
