@@ -60,7 +60,7 @@ pipeline {
 								curl --header "Authorization: Bearer ${OAuth}" ^
 								--header "Content-Type: application/json" ^
 								--header "X-HTTP-Method-Override: PATCH" ^
-								--data @Dectivate.json ^
+								--data @Deactivate.json ^
 								--location "${serviceURL}/ic/api/integration/v1/integrations/${integName}"
 							"""
 							echo 'Deactivated Integration to be Replaced'
