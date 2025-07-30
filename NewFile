@@ -35,8 +35,8 @@ pipeline {
                         usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW'),
                         string(credentialsId: 'OAuth', variable: 'OAuth')
                     ]) {
-                        def serviceURL = "https://design.integration.us-ashburn-1.ocp.oraclecloud.com"
-                        def testInstance = "testinstance-idevjxz332qf-ia"
+                        def serviceURL = ""
+                        def testInstance = ""
 
                         if (params.InstanceURL.toString() == "DEV") {
                             echo "Using DEV environment"
