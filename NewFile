@@ -9,7 +9,7 @@ def passwordHandler(String input) {
     return result.toString()
 }
 
-/*def Update_details(instance_selected) {
+def Update_details(instance_selected) {
     if (instance_selected.equals("DEV")) {
         env.USR = env.DEV_Creds_USR
         env.PSW = env.DEV_Creds_PSW
@@ -20,13 +20,15 @@ def passwordHandler(String input) {
         env.serviceURL = env.TEST_URL
         env.testInstance = env.test_Integration_Instance
     }
-}*/
+}
 
 pipeline {
     agent any
-    /*environment {
+
+    environment {
         DEV_Creds = credentials('DEV_CredID')
-    }*/
+    }
+
     stages {
         stage('Import Integration') {
             steps {
@@ -49,117 +51,68 @@ pipeline {
                             echo "Adding New Integration"
                             bat """
                                 curl --location "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}" ^
-                                --header "Authorization: Bearer ${OAuth}" ^
+                                --header "Authorization: Bearer %OAuth%" ^
                                 --form "file=@\\"${params.IARFileName}\\""
                             """
-                        }
-						else if (selectedOption == 'Replace') {
-							echo 'Replacing an integration'
-							def integName = params.Integration_Identifier.toString()
-							bat """
-							curl --location "${serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${testInstance}" ^
-							--header "Authorization: Bearer ${OAuth}" ^
-							--header "Content-Type: application/json" ^
-							--header "X-HTTP-Method-Override: PATCH" ^
-							--data "{\\"status\\":\\"CONFIGURED\\"}"
-							"""
-							echo 'Deactivated Integration to be Replaced'
-							
-							bat """
-                                curl --location "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}" ^
-                                --header "Authorization: Bearer ${OAuth}" ^
-                                --form "file=@\\"${params.IARFileName}\\""
-                            """
-							echo 'Integration Replaced'
-							
-                    } else {
-                        echo 'No import method is selected'
-                    }
-                    }
-                }
-            }
-        }
-		
-		
-		
-		
-        stage('Import Connection') {
-            steps {
-                script {
-					withCredentials([string(credentialsId: 'OAuth', variable: 'OAuth')]) {
-					 def serviceURL = ""
-                        def testInstance = ""
-						if (params.InstanceURL.toString() == "DEV") {
-   // echo "Using DEV environment"
-    serviceURL = env.DEV_URL
-    testInstance = env.test_Integration_Instance
-}
-                    def csvFile = readFile(params.ConnectionProperties).trim()
-                    def records = csvFile.readLines().drop(1).collect { line -> line.tokenize(',') }
-                    records.each { record ->
-                        def field1 = record[0].trim()
-                        def field2 = record[1].trim()
-                        def field3 = record[2].trim()
-                        def field4 = record[3].trim()
-
- 
-
-                        def conProperties = """
-                            { 
-                                "connectionProperties": [{ 
-                                    "propertyGroup": "CONNECTION_PROPS",
-                                    "propertyName": "connectionUrl",
-                                    "propertyType": "URL",
-                                    "propertyValue": "${field1}"
-                                }],
-                                "securityPolicy": "BASIC_AUTH",
-                                "securityProperties": [
-                                    {
-                                        "propertyGroup": "CREDENTIALS",
-                                        "propertyName": "username",
-                                        "propertyValue": "${field2}"
-                                    },
-                                    {
-                                        "propertyGroup": "CREDENTIALS",
-                                        "propertyName": "password",
-                                        "propertyValue": "${field3}"
-                                    }
-                                ]
-                            }
-                        """
-                        def payload = conProperties.replace('\n', '').trim()
-                        writeFile file: 'payload.json', text: payload
-                        def selectedOption = "${params.Import_Method}".trim()
-                        if (selectedOption == 'New') {
-                            echo 'Adding new connection'
-                            bat """
-curl -X POST ^
-  -H "Authorization: Bearer ${OAuth}" ^
-  -H "X-HTTP-Method-Override: PATCH" ^
-  -H "Content-Type: application/json" ^
-  -d @payload.json "${serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${testInstance}"
-"""
-                            echo "New connection configured"
                         } else if (selectedOption == 'Replace') {
-                            echo 'Replacing a connection'
+                            echo 'Replacing an integration'
+                            def integName = params.Integration_Identifier.toString()
+
+                            // Deactivate integration
                             bat """
-curl -X POST ^
-  -H "Authorization: Bearer ${OAuth}" ^
-  -H "X-HTTP-Method-Override: PATCH" ^
-  -H "Content-Type: application/json" ^
-  -d @payload.json "${serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${testInstance}"
-"""
+                                curl --location "${serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${testInstance}" ^
+                                --header "Authorization: Bearer %OAuth%" ^
+                                --header "Content-Type: application/json" ^
+                                --header "X-HTTP-Method-Override: PATCH" ^
+                                --data "{\\"status\\":\\"CONFIGURED\\"}"
+                            """
+                            echo 'Deactivated Integration to be Replaced'
+
+                            // Import new .iar
+                            bat """
+                                curl --location "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}" ^
+                                --header "Authorization: Bearer %OAuth%" ^
+                                --form "file=@\\"${params.IARFileName}\\""
+                            """
+                            echo 'Integration Replaced'
                         } else {
                             echo 'No import method is selected'
                         }
                     }
                 }
-			}
             }
         }
-		
-        
 
-       
+        stage('Import Connection') {
+            steps {
+                script {
+                    withCredentials([
+                        string(credentialsId: 'OAuth', variable: 'OAuth')
+                    ]) {
+                        // DEBUG: Show available files
+                        bat 'dir /s /b'
+                        bat 'dir Connections'
+
+                        def connFileName = "${params.ConnectionFileName}".trim()
+                        def connFilePath = "Connections/${connFileName}"
+
+                        echo "Reading connection file: ${connFilePath}"
+                        def connData = readFile(file: connFilePath)
+
+                        echo "Connection JSON content loaded (masked in logs)"
+
+                        // Call the connection import API (example)
+                        def connURL = "${env.DEV_URL}/ic/api/integration/v1/connections"
+
+                        bat """
+                            curl --location --request POST "${connURL}" ^
+                            --header "Authorization: Bearer %OAuth%" ^
+                            --header "Content-Type: application/json" ^
+                            --data @${connFilePath}
+                        """
+                    }
+                }
+            }
+        }
     }
-    }
+}
