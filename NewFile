@@ -57,12 +57,11 @@ pipeline {
 							echo 'Replacing an integration'
 							def integName = params.Integration_Identifier.toString()
 							bat """
-								curl --header "Authorization: Bearer ${OAuth}" ^
-								--header "Content-Type: application/json" ^
-								--header "X-HTTP-Method-Override: PATCH" ^
-								--data @Deactivate.json ^
-								-d 'enableAsyncActivationMode=true' ^
-								--location "${serviceURL}/ic/api/integration/v1/integrations/${integName}"
+							curl --location "${serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${testInstance}" ^
+							--header "Authorization: Bearer ${OAuth}" ^
+							--header "Content-Type: application/json" ^
+							--header "X-HTTP-Method-Override: PATCH" ^
+							--data "{\\"status\\":\\"CONFIGURED\\"}"
 							"""
 							echo 'Deactivated Integration to be Replaced'
 							
