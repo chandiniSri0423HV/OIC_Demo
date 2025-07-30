@@ -13,6 +13,9 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'Basic_Auth_Encoded', variable: 'ENCODED_AUTH')]) {
                     bat """
+                        @echo off
+                        setlocal enabledelayedexpansion
+
                         echo ==== Generate Bearer Token ====
 
                         curl -s --request POST "%TOKEN_URL%" ^
@@ -23,12 +26,15 @@ pipeline {
                         --insecure > token.json
 
                         echo ==== Extract Bearer Token ====
-                        for /f "tokens=2 delims=:\\" " %%A in ('findstr "access_token" token.json') do echo %%A > token.txt
 
-                        REM Clean token if it ends with comma or extra quotes
-                        set /p RAW_TOKEN=<token.txt
-                        for %%A in (!RAW_TOKEN:,=!) do echo %%~A > token.txt
+                        for /f "tokens=2 delims=:\", " %%A in ('findstr "access_token" token.json') do (
+                            echo %%A > token.txt
+                        )
+
+                        echo ====== Bearer Token Extracted ======
                         type token.txt
+
+                        endlocal
                     """
                 }
             }
@@ -37,7 +43,9 @@ pipeline {
         stage('Import Integration Archive') {
             steps {
                 bat """
+                    @echo off
                     setlocal enabledelayedexpansion
+
                     set /p BEARER_TOKEN=<token.txt
 
                     echo ====== Starting Import Integration with Token ======
@@ -49,6 +57,7 @@ pipeline {
                     --form "file=@%ARCHIVE_FILE%" ^
                     --form "type=application/octet-stream" ^
                     --insecure
+
                     endlocal
                 """
             }
