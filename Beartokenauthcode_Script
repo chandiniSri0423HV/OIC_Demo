@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         OIC_HOST       = 'https://design.integration.us-ashburn-1.ocp.oraclecloud.com'
-        TOKEN_URL      = 'https://idcs-.../oauth2/v1/token'
+        TOKEN_URL      = 'https://idcs-b0bf5647dbe34af4914cf420cba0294c.identity.oraclecloud.com/oauth2/v1/token'
         INSTANCE_PARAM = '?integrationInstance=testinstance-xyz'
         ARCHIVE_FILE   = 'ITEM_INTEGRATION_01.00.0000.iar'
     }
@@ -16,15 +16,18 @@ pipeline {
                         def tokenResp = httpRequest(
                             httpMode: 'POST',
                             url: "${env.TOKEN_URL}",
-                            customHeaders: [[name: 'Authorization', value: "Basic ${ENCODED_AUTH}"],
-                                            [name: 'Content-Type', value: 'application/x-www-form-urlencoded']],
-                            requestBody: "grant_type=client_credentials&scope=${env.OIC_HOST}:443urn:opc:resource:consumer::all'],
+                            customHeaders: [
+                                [name: 'Authorization', value: "Basic ${ENCODED_AUTH}"],
+                                [name: 'Content-Type', value: 'application/x-www-form-urlencoded']
+                            ],
+                            requestBody: "grant_type=client_credentials&scope=${env.OIC_HOST}:443urn:opc:resource:consumer::all",
                             validResponseCodes: '200'
                         )
-                        def access_token = new groovy.json.JsonSlurperClassic().parseText(tokenResp.content).access_token
 
+                        def access_token = new groovy.json.JsonSlurperClassic().parseText(tokenResp.content).access_token
                         echo "Extracted Bearer Token: ${access_token}"
 
+                        // Call external script or curl command to import integration
                         bat """
                             curl --location --request POST "${OIC_HOST}/ic/api/integration/v1/integrations/archive${INSTANCE_PARAM}" ^
                             --header "Authorization: Bearer ${access_token}" ^
