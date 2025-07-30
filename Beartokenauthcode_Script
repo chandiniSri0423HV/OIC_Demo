@@ -9,31 +9,31 @@ pipeline {
     }
 
     stages {
-        stage('Get Token and Upload Integration') {
+        stage('Get Token & Upload Integration') {
             steps {
                 withCredentials([string(credentialsId: 'Basic_Auth_Encoded', variable: 'ENCODED_AUTH')]) {
-                    bat """
-                        echo ==== Getting Bearer Token ====
+                    script {
+                        def tokenResp = httpRequest(
+                            httpMode: 'POST',
+                            url: "${env.TOKEN_URL}",
+                            customHeaders: [[name: 'Authorization', value: "Basic ${ENCODED_AUTH}"],
+                                            [name: 'Content-Type', value: 'application/x-www-form-urlencoded']],
+                            requestBody: "grant_type=client_credentials&scope=${env.OIC_HOST}:443urn:opc:resource:consumer::all'],
+                            validResponseCodes: '200'
+                        )
+                        def access_token = new groovy.json.JsonSlurperClassic().parseText(tokenResp.content).access_token
 
-                        curl -s --request POST "%TOKEN_URL%" ^
-                          --header "Authorization: Basic %ENCODED_AUTH%" ^
-                          --header "Content-Type: application/x-www-form-urlencoded" ^
-                          --data-urlencode "grant_type=client_credentials" ^
-                          --data-urlencode "scope=%OIC_HOST%:443urn:opc:resource:consumer::all" ^
-                          --insecure > token.json
+                        echo "Extracted Bearer Token: ${access_token}"
 
-                        REM ==== Extract token using jq (must be installed) ====
-                        for /f %%i in ('jq -r ".access_token" token.json') do set TOKEN=%%i
-
-                        echo Bearer Token: %TOKEN%
-
-                        curl --location --request POST "%OIC_HOST%/ic/api/integration/v1/integrations/archive%INSTANCE_PARAM%" ^
-                          --header "Authorization: Bearer %TOKEN%" ^
-                          --header "Accept: application/json" ^
-                          --form "file=@%ARCHIVE_FILE%" ^
-                          --form "type=application/octet-stream" ^
-                          --insecure
-                    """
+                        bat """
+                            curl --location --request POST "${OIC_HOST}/ic/api/integration/v1/integrations/archive${INSTANCE_PARAM}" ^
+                            --header "Authorization: Bearer ${access_token}" ^
+                            --header "Accept: application/json" ^
+                            --form "file=@${ARCHIVE_FILE}" ^
+                            --form "type=application/octet-stream" ^
+                            --insecure
+                        """
+                    }
                 }
             }
         }
