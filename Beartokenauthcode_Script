@@ -22,7 +22,7 @@ pipeline {
                         --insecure -o token.json
 
                         echo ==== Extract Bearer Token ====
-                        for /f "tokens=2 delims=:\\\\\\\" " %%A in ('findstr "access_token" token.json') do echo %%A > token.txt
+                        for /f "tokens=2 delims=:\\\" " %%A in ('findstr "access_token" token.json') do echo %%A > token.txt
                         echo ====== Bearer Token Extracted ======
                         type token.txt
                     """
