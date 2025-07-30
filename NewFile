@@ -61,6 +61,7 @@ pipeline {
 								--header "Content-Type: application/json" ^
 								--header "X-HTTP-Method-Override: PATCH" ^
 								--data @Deactivate.json ^
+								-d 'enableAsyncActivationMode=true' ^
 								--location "${serviceURL}/ic/api/integration/v1/integrations/${integName}"
 							"""
 							echo 'Deactivated Integration to be Replaced'
