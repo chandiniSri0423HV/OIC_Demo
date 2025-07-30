@@ -136,6 +136,7 @@ pipeline {
                         }
                     }
                 }
+				}
             }
 
         stage('Import Lookup') {
@@ -218,7 +219,6 @@ pipeline {
                             """
                     }
                 }
-}
             }
         }
     }
