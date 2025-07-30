@@ -40,7 +40,7 @@ pipeline {
                             echo 'Replacing an integration'
                             def integName = params.Integration_Identifier.toString()
                             bat """
-                                curl --location "${serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${testInstance}" ^
+                                curl  -X POST --location "${serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${testInstance}" ^
                                 --header "Authorization: Bearer ${OAuth}" ^
                                 --header "Content-Type: application/json" ^
                                 --header "X-HTTP-Method-Override: PATCH" ^
@@ -199,7 +199,7 @@ pipeline {
                     if (params.Activate_Integration) {
                         echo 'Checkbox is checked'
                         bat """
-                                curl --location "${serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${testInstance}" ^
+                                curl  -X POST --location "${serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${testInstance}" ^
                                 --header "Authorization: Bearer ${OAuth}" ^
                                 --header "Content-Type: application/json" ^
                                 --header "X-HTTP-Method-Override: PATCH" ^
@@ -209,7 +209,7 @@ pipeline {
                     } else {
                         echo 'Checkbox is not checked'
                         bat """
-                                curl --location "${serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${testInstance}" ^
+                                curl  -X POST --location "${serviceURL}/ic/api/integration/v1/integrations/${integName}?integrationInstance=${testInstance}" ^
                                 --header "Authorization: Bearer ${OAuth}" ^
                                 --header "Content-Type: application/json" ^
                                 --header "X-HTTP-Method-Override: PATCH" ^
