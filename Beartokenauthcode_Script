@@ -14,8 +14,8 @@ pipeline {
                     bat '''
                         @echo off
                         setlocal ENABLEDELAYEDEXPANSION
+
                         echo ==== Generate Bearer Token ====
-                        
                         curl -s --request POST "%TOKEN_URL%" ^
                           --header "Authorization: Basic %ENCODED_AUTH%" ^
                           --header "Content-Type: application/x-www-form-urlencoded" ^
@@ -24,15 +24,19 @@ pipeline {
                           --insecure -o token.json
 
                         echo ==== Extract Token ====
-                        for /f "tokens=2 delims=:," %%A in ('findstr "access_token" token.json') do (
-                            set "RAW=%%~A"
-                            set "RAW=!RAW:~1,-1!"
-                            echo !RAW! > token.txt
+                        for /f "tokens=2 delims=:" %%A in ('findstr "access_token" token.json') do (
+                            set line=%%A
+                            set line=!line:~2!
+                            for /f "delims=\\\"," %%B in ("!line!") do (
+                                set TOKEN=%%B
+                                echo !TOKEN! > token.txt
+                            )
                         )
 
                         echo ====== Extracted Token ======
                         type token.txt
                         echo =================================
+
                         endlocal
                     '''
                 }
@@ -45,11 +49,11 @@ pipeline {
                     @echo off
                     setlocal ENABLEDELAYEDEXPANSION
 
-                    echo ==== Read Bearer Token ====
+                    echo ==== Read Bearer Token from file ====
                     set /p TOKEN=<token.txt
                     echo ====== Using Token: !TOKEN! ======
 
-                    echo ==== Import Integration Archive ====
+                    echo ==== Importing IAR to Oracle Integration Cloud ====
                     curl -X POST "%IMPORT_URL%" ^
                       -H "Authorization: Bearer !TOKEN!" ^
                       -H "Content-Type: multipart/form-data" ^
