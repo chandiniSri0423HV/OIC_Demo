@@ -32,7 +32,12 @@ pipeline {
                         )
 
                         echo ====== Bearer Token Extracted ======
+                        echo Bearer Token: !BEARER_TOKEN!
+
                         type token.txt
+                        echo Bearer Token: !BEARER_TOKEN!
+
+
 
                         endlocal
                     """
