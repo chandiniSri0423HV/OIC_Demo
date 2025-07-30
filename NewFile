@@ -93,7 +93,7 @@ pipeline {
                         bat 'dir /s /b'
                         bat 'dir Connections'
 
-                        def connFileName = "${params.ConnectionFileName}".trim()
+                        def connFileName = "${params.ConnectionProperties}".trim()
                         def connFilePath = "Connections/${connFileName}"
 
                         echo "Reading connection file: ${connFilePath}"
