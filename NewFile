@@ -184,13 +184,13 @@ curl -X POST ^
                                 echo 'Adding new lookup'
                                 bat """
                                     curl -X POST ^
-  -H "Authorization: Bearer ${OAuth}" ^ -F \"file=@${fileName}\" -F \"type=application/octet-stream\" "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}" ^
+  -H "Authorization: Bearer ${OAuth}" ^ -F \"file=@${fileName}\" -F \"type=application/octet-stream\" "${serviceURL}/ic/api/integration/v1/lookups/archive?integrationInstance=${testInstance}" ^
                                 """
                             } else if (selectedOption == 'Replace') {
                                 echo 'Replacing a lookup'
                                 bat """
                                     curl -X PUT ^
-  -H "Authorization: Bearer ${OAuth} -F \"file=@${fileName}\" -F \"type=application/octet-stream\" "${serviceURL}/ic/api/integration/v1/integrations/archive?integrationInstance=${testInstance}" ^
+  -H "Authorization: Bearer ${OAuth} -F \"file=@${fileName}\" -F \"type=application/octet-stream\" "${serviceURL}/ic/api/integration/v1/lookups/archive?integrationInstance=${testInstance}" ^
                                 """
                             } else {
                                 echo 'No import method is selected'
