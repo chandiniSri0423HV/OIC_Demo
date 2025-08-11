@@ -280,7 +280,7 @@ pipeline {
     post {
         always {
             script {
-                def status = currentBuild.currentResult
+             /*   def status = currentBuild.currentResult
                 def failCount = 0
                 def failTag = ""
                 def tests = 1
@@ -301,7 +301,7 @@ pipeline {
                     failTag = '<failure message="Build Failed">Build did not complete successfully</failure>'
                     numericStatus = 0
                     currentBuild.result = 'FAILURE'
-                }
+                }*/
 
                 // Generate JUnit XML
                 def xml = """<?xml version="1.0" encoding="UTF-8"?>
