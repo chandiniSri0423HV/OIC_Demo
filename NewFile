@@ -249,7 +249,7 @@ pipeline {
             }
         }
 
-      /*  stage('Aggregate Test Results') {
+        stage('Aggregate Test Results') {
             steps {
                 script {
                     testResultsAggregator columns: 'Job, Build, Status, Percentage, Total, Pass, Fail',
@@ -273,14 +273,14 @@ pipeline {
                     ])
                 }
             }
-        }*/
+        }
 
     } // stages end
 
     post {
         always {
             script {
-             /*   def status = currentBuild.currentResult
+                def status = currentBuild.currentResult
                 def failCount = 0
                 def failTag = ""
                 def tests = 1
@@ -300,8 +300,8 @@ pipeline {
                     failCount = 1
                     failTag = '<failure message="Build Failed">Build did not complete successfully</failure>'
                     numericStatus = 0
-                    currentBuild.result = 'FAILED'
-                }*/
+                    currentBuild.result = 'FAILURE'
+                }
 
                 // Generate JUnit XML
                 def xml = """<?xml version="1.0" encoding="UTF-8"?>
