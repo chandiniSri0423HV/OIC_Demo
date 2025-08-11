@@ -229,7 +229,7 @@ pipeline {
         if [ ! -f build_data.csv ]; then
             echo "Time,Value" > build_data.csv
         fi
-        echo "$(date +%s),$((RANDOM % 100))" >> build_data.csv
+        echo "$(date +%s),$((RANDOM % 10))" >> build_data.csv
         '''
     }
 }
@@ -248,15 +248,22 @@ stage('Publish Plot') {
 
 
     }//Stages end
+	
 	post {
-        always {
-            emailext(
-                subject: "Build ${currentBuild.currentResult}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: """Hi,
-                         Build ${env.JOB_NAME} #${env.BUILD_NUMBER} finished with status: ${currentBuild.currentResult}.
-                         Check console output at: "${env.BUILD_URL}">${env.BUILD_URL}""",
-                recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider']]
-            )
-        }
+    always {
+        emailext(
+           
+            subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}!",
+            body: """Hi,
+
+${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}:
+
+Check console output at ${env.BUILD_URL} to view the results.
+""",
+recipientProviders: [[$class: 'RequesterRecipientProvider']]
+
+        )
     }
+}
+
 }
