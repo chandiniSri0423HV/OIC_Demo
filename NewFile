@@ -263,14 +263,14 @@ pipeline {
                             [jobName: 'E2ETests', jobFriendlyName: 'E2E Tests', groupName: 'QA']
                         ]
 
-                    publishHTML(target: [
+                  /*  publishHTML(target: [
                         allowMissing: true,
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
                         reportDir: "html",
                         reportFiles: 'index.html',
                         reportName: "Test Results"
-                    ])
+                    ])*/
                 }
             }
         }
