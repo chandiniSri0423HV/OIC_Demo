@@ -255,24 +255,39 @@ pipeline {
     always {
 	script {
             def status = currentBuild.currentResult
-            def failCount = status == "SUCCESS" ? 0 : 1
-            def failTag = status == "SUCCESS" ? "" : '<failure message="Build Failed">Build did not complete successfully</failure>'
+            def failCount = 0
+            def failTag = ""
+            def tests = 1
 
+            if (status == "SUCCESS") {
+                // Pass case
+                failCount = 0
+                failTag = ""
+                currentBuild.result = 'SUCCESS'
+            } else if (status == "ABORTED") {
+                // Aborted case
+                failCount = 0
+                failTag = '<skipped/>'
+                currentBuild.result = 'ABORTED'
+            } else {
+                // Fail case (includes "FAILURE" and "UNSTABLE")
+                failCount = 1
+                failTag = '<failure message="Build Failed">Build did not complete successfully</failure>'
+                currentBuild.result = 'FAILURE'
+            }
+
+            // Generate JUnit XML
             def xml = """<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="PipelineResult" tests="1" failures="${failCount}">
+<testsuite name="PipelineResult" tests="${tests}" failures="${failCount}" skipped="${status == 'ABORTED' ? 1 : 0}">
     <testcase classname="Pipeline" name="RunStatus">
         ${failTag}
     </testcase>
 </testsuite>
 """
             writeFile file: "test-results/result.xml", text: xml
-
-            // 🔹 Force Jenkins build result if failed
-            if (failCount > 0) {
-                currentBuild.result = 'FAILURE'
-            }
         }
 
+        // Publish test results so they appear in the trend graph
         junit 'test-results/*.xml'
         emailext(
            
