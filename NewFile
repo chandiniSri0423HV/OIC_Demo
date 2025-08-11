@@ -11,6 +11,9 @@ def passwordHandler(String input) {
 
 pipeline {
     agent any
+tools {
+        maven 'M3' // Make sure this matches the Maven name you configured in Jenkins
+    }
 
     stages {
 
@@ -213,13 +216,14 @@ pipeline {
             }
         }
 
-        stage('Run Tests') {
-    steps {
-        bat 'if not exist test-results mkdir test-results'
-        // Example: run tests and save results as JUnit XML
-        bat 'mvn test -Dsurefire.reportFormat=xml -Dsurefire.reportName=test-results'
-    }
-}
+       stage('Run Tests') {
+            steps {
+                bat '''
+                    if not exist test-results mkdir test-results
+                    mvn test -Dsurefire.reportFormat=xml -Dsurefire.reportName=test-results
+                '''
+            }
+        }
     }
 
     post {
@@ -235,7 +239,9 @@ Check console output at ${env.BUILD_URL} to view the results.
                 recipientProviders: [[$class: 'RequesterRecipientProvider']]
             )
 
-        junit allowEmptyResults: true, testResults: 'test-results/*.xml'
-        }
+junit(
+                testResults: '**/test-results/*.xml',
+                allowEmptyResults: true // <-- prevents failure if no tests are found
+            )        }
     }
 }
