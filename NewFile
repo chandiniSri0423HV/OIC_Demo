@@ -223,28 +223,18 @@ pipeline {
                 }
             }
         }
-		stage('Generate CSV') {
+		stage('Run Tests') {
             steps {
-                script {
-                    def csvContent = "X,Y\n1,10\n2,20\n3,15\n4,30\n"
-                    writeFile file: 'data.csv', text: csvContent
-                }
-            }
-        }
+                echo "Running tests..."
+                // If you have real tests
+                // bat 'mvn test'
 
-        stage('Plot Graph') {
-            steps {
-                plot csvFileName: 'build-plot.csv',
-                     csvSeries: [[
-                         file: 'data.csv',
-                         displayTableFlag: false,
-                         inclusionFlag: 'OFF',
-                         url: ''
-                     ]],
-                     group: 'Build Metrics',
-                     style: 'line',
-                     title: 'Sample Build Data',
-                     yaxis: 'Value'
+                // Dummy test result (so Jenkins can generate trend graph)
+                writeFile file: 'test-results/TEST-Dummy.xml', text: """
+                    <testsuite tests="1" failures="0">
+                        <testcase classname="dummy.Class" name="dummyTest"/>
+                    </testsuite>
+                """
             }
         }
 
@@ -266,6 +256,9 @@ recipientProviders: [[$class: 'RequesterRecipientProvider']]
 
         )
     }
+	 always {
+            junit '**/test-results/*.xml'
+        }
 }
 
 }
