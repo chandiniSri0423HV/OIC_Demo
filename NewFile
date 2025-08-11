@@ -226,84 +226,27 @@ pipeline {
 		stage('Generate CSV') {
             steps {
                 script {
-                    // Generate CSV
                     def csvContent = "X,Y\n1,10\n2,20\n3,15\n4,30\n"
                     writeFile file: 'data.csv', text: csvContent
                 }
             }
         }
 
-        stage('Generate HTML Graph') {
+        stage('Plot Graph') {
             steps {
-                script {
-                    // Read CSV into JavaScript arrays
-                    def csvData = readFile('data.csv').split("\n")
-                    def labels = []
-                    def values = []
-                    csvData.drop(1).each { line ->
-                        if (line.trim()) {
-                            def parts = line.split(",")
-                            labels << parts[0]
-                            values << parts[1]
-                        }
-                    }
-
-                    // Create HTML with Chart.js
-                    def htmlContent = """
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <title>Build Graph</title>
-                        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                    </head>
-                    <body>
-                        <h3>Sample Build Data</h3>
-                        <canvas id="myChart" width="600" height="300"></canvas>
-                        <script>
-                            const ctx = document.getElementById('myChart').getContext('2d');
-                            new Chart(ctx, {
-                                type: 'line',
-                                data: {
-                                    labels: ${labels},
-                                    datasets: [{
-                                        label: 'Value',
-                                        data: ${values},
-                                        borderColor: 'rgba(75, 192, 192, 1)',
-                                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                                        fill: true,
-                                        tension: 0.3
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    plugins: {
-                                        legend: { display: true }
-                                    }
-                                }
-                            });
-                        </script>
-                    </body>
-                    </html>
-                    """
-                    writeFile file: 'graph.html', text: htmlContent
-                }
+                plot csvFileName: 'build-plot.csv',
+                     csvSeries: [[
+                         file: 'data.csv',
+                         displayTableFlag: false,
+                         inclusionFlag: 'OFF',
+                         url: ''
+                     ]],
+                     group: 'Build Metrics',
+                     style: 'line',
+                     title: 'Sample Build Data',
+                     yaxis: 'Value'
             }
         }
-
-        stage('Publish Graph') {
-            steps {
-                publishHTML([
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: '.',
-                    reportFiles: 'graph.html',
-                    reportName: 'Build Graph'
-                ])
-            }
-        }
-   
 
 
     }//Stages end
