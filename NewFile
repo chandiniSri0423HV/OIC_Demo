@@ -232,47 +232,49 @@ pipeline {
             }
         }
 
-        stage('Plot Graph') {
-            steps {
-                plot csvFileName: 'build-plot.csv',
-                     csvSeries: [[
-                         file: 'data.csv',
-                         displayTableFlag: false,
-                         inclusionFlag: 'OFF',
-                         url: ''
-                     ]],
-                     group: 'Build Metrics',
-                     style: 'line',
-                     title: 'Sample Build Data',
-                     yaxis: 'Value'
-            }
-        }
+       stage('Pass/Fail/Aborted History Plot') {
+    steps {
+        plot csvFileName: 'status-history.csv',
+             csvSeries: [[
+                 file: 'status-history.csv',
+                 displayTableFlag: true,
+                 inclusionFlag: 'OFF',
+                 url: ''
+             ]],
+             group: 'Build Status History',
+             style: 'line',
+             title: 'Build Status (1=Pass, 0=Fail, 0.5=Aborted)',
+             yaxis: 'Status'
+    }
+}
+
 
 
     }//Stages end
 	
 	post {
     always {
-	script {
+	  script {
             def status = currentBuild.currentResult
             def failCount = 0
             def failTag = ""
             def tests = 1
+            def numericStatus = 0 // For CSV plotting
 
             if (status == "SUCCESS") {
-                // Pass case
                 failCount = 0
                 failTag = ""
+                numericStatus = 1
                 currentBuild.result = 'SUCCESS'
             } else if (status == "ABORTED") {
-                // Aborted case
                 failCount = 0
                 failTag = '<skipped/>'
+                numericStatus = 0.5
                 currentBuild.result = 'ABORTED'
             } else {
-                // Fail case (includes "FAILURE" and "UNSTABLE")
                 failCount = 1
                 failTag = '<failure message="Build Failed">Build did not complete successfully</failure>'
+                numericStatus = 0
                 currentBuild.result = 'FAILURE'
             }
 
@@ -285,9 +287,23 @@ pipeline {
 </testsuite>
 """
             writeFile file: "test-results/result.xml", text: xml
+
+            // Append to CSV history (keeps last 20 lines)
+            def csvFile = "status-history.csv"
+            def line = "${env.BUILD_NUMBER},${numericStatus}"
+            if (fileExists(csvFile)) {
+                def existing = readFile(csvFile).readLines()
+                existing << line
+                if (existing.size() > 20) {
+                    existing = existing[-20..-1] // Keep last 20 entries
+                }
+                writeFile file: csvFile, text: existing.join("\n") + "\n"
+            } else {
+                writeFile file: csvFile, text: "Build,Status\n${line}\n"
+            }
         }
 
-        // Publish test results so they appear in the trend graph
+        // Publish JUnit results (for Test Result Trend)
         junit 'test-results/*.xml'
         emailext(
            
