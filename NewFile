@@ -224,27 +224,29 @@ pipeline {
             }
         }
 		stage('Generate CSV') {
-    steps {
-        sh '''
-        if [ ! -f build_data.csv ]; then
-            echo "Time,Value" > build_data.csv
-        fi
-        echo "$(date +%s),$((RANDOM % 10))" >> build_data.csv
-        '''
-    }
-}
-
-stage('Publish Plot') {
-    steps {
-        plot csvFileName: 'build_plot.csv',
-             csvSeries: [[file: 'build_data.csv', displayTableFlag: true, label: 'Performance']],
-             group: 'Performance',
-             style: 'line',
-             title: 'Build Performance',
-             yaxis: 'Value',
-             keepRecords: true
-    }
-}
+            steps {
+                script {
+                    // Example: Generate a CSV file
+                    def csvContent = "X,Y\n1,10\n2,20\n3,15\n4,30\n"
+                    writeFile file: 'data.csv', text: csvContent
+                }
+            }
+        }
+        stage('Plot Graph') {
+            steps {
+                plot csvFileName: 'build-plot.csv',
+                     csvSeries: [[
+                         file: 'data.csv',
+                         displayTableFlag: false,
+                         inclusionFlag: 'OFF',
+                         url: ''
+                     ]],
+                     group: 'Build Metrics',
+                     style: 'line',          // simple line graph
+                     title: 'Sample Build Data',
+                     yaxis: 'Value'
+            }
+        }
 
 
     }//Stages end
