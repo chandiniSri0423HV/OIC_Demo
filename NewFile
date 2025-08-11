@@ -223,6 +223,34 @@ pipeline {
                 }
             }
         }
+		stage('Generate CSV') {
+            steps {
+                sh '''
+                echo "Time,Value" > build_data.csv
+                echo "$(date +%s),$((RANDOM % 100))" >> build_data.csv
+                '''
+            }
+        }
+        stage('Publish Plot') {
+            steps {
+                plot csvFileName: 'plot.csv',
+                     csvSeries: [[file: 'build_data.csv', displayTableFlag: true]],
+                     group: 'Performance',
+                     title: 'Build Performance'
+            }
+        }
 
+    }//Stages end
+	post {
+        always {
+            emailext(
+                subject: "Build ${currentBuild.currentResult}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: """<p>Hi,</p>
+                         <p>Build <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b> finished with status: <b>${currentBuild.currentResult}</b>.</p>
+                         <p>Check console output at: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>""",
+                recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider']]
+                // ❌ No 'to:' field — Jenkins will use global default recipient list
+            )
+        }
     }
 }
