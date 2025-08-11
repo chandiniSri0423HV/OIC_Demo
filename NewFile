@@ -11,9 +11,6 @@ def passwordHandler(String input) {
 
 pipeline {
     agent any
-tools {
-        maven 'M3' // Make sure this matches the Maven name you configured in Jenkins
-    }
 
     stages {
 
@@ -117,14 +114,25 @@ tools {
                             writeFile file: 'payload.json', text: payload
 
                             def selectedOption = params.Import_Method.trim()
-                            echo selectedOption == 'New' ? 'Adding new connection' : 'Replacing a connection'
-                            bat """
-                                curl -X POST ^
-                                -H "Authorization: Bearer ${OAuth}" ^
-                                -H "X-HTTP-Method-Override: PATCH" ^
-                                -H "Content-Type: application/json" ^
-                                -d @payload.json "${serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${testInstance}"
-                            """
+                            if (selectedOption == 'New') {
+                                echo 'Adding new connection'
+                                bat """
+                                    curl -X POST ^
+                                    -H "Authorization: Bearer ${OAuth}" ^
+                                    -H "X-HTTP-Method-Override: PATCH" ^
+                                    -H "Content-Type: application/json" ^
+                                    -d @payload.json "${serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${testInstance}"
+                                """
+                            } else if (selectedOption == 'Replace') {
+                                echo 'Replacing a connection'
+                                bat """
+                                    curl -X POST ^
+                                    -H "Authorization: Bearer ${OAuth}" ^
+                                    -H "X-HTTP-Method-Override: PATCH" ^
+                                    -H "Content-Type: application/json" ^
+                                    -d @payload.json "${serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${testInstance}"
+                                """
+                            }
                         }
                     }
                 }
@@ -148,8 +156,8 @@ tools {
                         def files = params.Lookup_FileNames.split(',')
                         def selectedOption = params.Import_Method.trim()
 
-                        for (fileName in files) {
-                            fileName = fileName.trim()
+                        for (int i = 0; i < files.size(); i++) {
+                            def fileName = files[i].trim()
                             if (fileName) {
                                 if (selectedOption == 'New') {
                                     echo 'Adding new lookup'
@@ -215,31 +223,49 @@ tools {
                 }
             }
         }
+		stage('Generate CSV') {
+            steps {
+                script {
+                    def csvContent = "X,Y\n1,10\n2,20\n3,15\n4,30\n"
+                    writeFile file: 'data.csv', text: csvContent
+                }
+            }
+        }
 
-       stage('Run Tests') {
-    steps {
-        bat """
-            if not exist test-results mkdir test-results
-            mvn test
-        """
-    }
-}
-    }
+        stage('Plot Graph') {
+            steps {
+                plot csvFileName: 'build-plot.csv',
+                     csvSeries: [[
+                         file: 'data.csv',
+                         displayTableFlag: false,
+                         inclusionFlag: 'OFF',
+                         url: ''
+                     ]],
+                     group: 'Build Metrics',
+                     style: 'line',
+                     title: 'Sample Build Data',
+                     yaxis: 'Value'
+            }
+        }
 
-    post {
-        always {
-            emailext(
-                subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}!",
-                body: """Hi,
+
+    }//Stages end
+	
+	post {
+    always {
+        emailext(
+           
+            subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}!",
+            body: """Hi,
 
 ${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}:
 
 Check console output at ${env.BUILD_URL} to view the results.
 """,
-                recipientProviders: [[$class: 'RequesterRecipientProvider']]
-            )
+recipientProviders: [[$class: 'RequesterRecipientProvider']]
 
-        junit 'target/surefire-reports/*.xml'
-       }
+        )
     }
+}
+
 }
