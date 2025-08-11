@@ -223,7 +223,8 @@ pipeline {
                 }
             }
         }
-		stage('Generate CSV') {
+
+        stage('Generate CSV') {
             steps {
                 script {
                     def csvContent = "X,Y\n1,10\n2,20\n3,15\n4,30\n"
@@ -232,92 +233,113 @@ pipeline {
             }
         }
 
-       stage('Pass/Fail/Aborted History Plot') {
-    steps {
-        plot csvFileName: 'status-history.csv',
-             csvSeries: [[
-                 file: 'status-history.csv',
-                 displayTableFlag: true,
-                 inclusionFlag: 'OFF',
-                 url: ''
-             ]],
-             group: 'Build Status History',
-             style: 'line',
-             title: 'Build Status (1=Pass, 0=Fail, 0.5=Aborted)',
-             yaxis: 'Status'
-    }
-}
-
-
-
-    }//Stages end
-	
-	post {
-    always {
-	  script {
-            def status = currentBuild.currentResult
-            def failCount = 0
-            def failTag = ""
-            def tests = 1
-            def numericStatus = 0 // For CSV plotting
-
-            if (status == "SUCCESS") {
-                failCount = 0
-                failTag = ""
-                numericStatus = 1
-                currentBuild.result = 'SUCCESS'
-            } else if (status == "ABORTED") {
-                failCount = 0
-                failTag = '<skipped/>'
-                numericStatus = 0.5
-                currentBuild.result = 'ABORTED'
-            } else {
-                failCount = 1
-                failTag = '<failure message="Build Failed">Build did not complete successfully</failure>'
-                numericStatus = 0
-                currentBuild.result = 'FAILURE'
+        stage('Pass/Fail/Aborted History Plot') {
+            steps {
+                plot csvFileName: 'status-history.csv',
+                     csvSeries: [[
+                         file: 'status-history.csv',
+                         displayTableFlag: true,
+                         inclusionFlag: 'OFF',
+                         url: ''
+                     ]],
+                     group: 'Build Status History',
+                     style: 'line',
+                     title: 'Build Status (1=Pass, 0=Fail, 0.5=Aborted)',
+                     yaxis: 'Status'
             }
+        }
 
-            // Generate JUnit XML
-            def xml = """<?xml version="1.0" encoding="UTF-8"?>
+        stage('Aggregate Test Results') {
+            steps {
+                script {
+                    testResultsAggregator columns: 'Job, Build, Status, Percentage, Total, Pass, Fail',
+                        recipientsList: 'team@example.com',
+                        outOfDateResults: '10',
+                        sortresults: 'Job Name',
+                        subject: 'Test Results Summary',
+                        jobs: [
+                            [jobName: 'IntegrationTests', jobFriendlyName: 'Integration Tests', groupName: 'QA'],
+                            [jobName: 'UnitTests', jobFriendlyName: 'Unit Tests', groupName: 'QA'],
+                            [jobName: 'E2ETests', jobFriendlyName: 'E2E Tests', groupName: 'QA']
+                        ]
+
+                    publishHTML(target: [
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: "html",
+                        reportFiles: 'index.html',
+                        reportName: "Test Results"
+                    ])
+                }
+            }
+        }
+
+    } // stages end
+
+    post {
+        always {
+            script {
+                def status = currentBuild.currentResult
+                def failCount = 0
+                def failTag = ""
+                def tests = 1
+                def numericStatus = 0 // For CSV plotting
+
+                if (status == "SUCCESS") {
+                    failCount = 0
+                    failTag = ""
+                    numericStatus = 1
+                    currentBuild.result = 'SUCCESS'
+                } else if (status == "ABORTED") {
+                    failCount = 0
+                    failTag = '<skipped/>'
+                    numericStatus = 0.5
+                    currentBuild.result = 'ABORTED'
+                } else {
+                    failCount = 1
+                    failTag = '<failure message="Build Failed">Build did not complete successfully</failure>'
+                    numericStatus = 0
+                    currentBuild.result = 'FAILURE'
+                }
+
+                // Generate JUnit XML
+                def xml = """<?xml version="1.0" encoding="UTF-8"?>
 <testsuite name="PipelineResult" tests="${tests}" failures="${failCount}" skipped="${status == 'ABORTED' ? 1 : 0}">
     <testcase classname="Pipeline" name="RunStatus">
         ${failTag}
     </testcase>
 </testsuite>
 """
-            writeFile file: "test-results/result.xml", text: xml
+                writeFile file: "test-results/result.xml", text: xml
 
-            // Append to CSV history (keeps last 20 lines)
-            def csvFile = "status-history.csv"
-            def line = "${env.BUILD_NUMBER},${numericStatus}"
-            if (fileExists(csvFile)) {
-                def existing = readFile(csvFile).readLines()
-                existing << line
-                if (existing.size() > 20) {
-                    existing = existing[-20..-1] // Keep last 20 entries
+                // Append to CSV history (keeps last 20 lines)
+                def csvFile = "status-history.csv"
+                def line = "${env.BUILD_NUMBER},${numericStatus}"
+                if (fileExists(csvFile)) {
+                    def existing = readFile(csvFile).readLines()
+                    existing << line
+                    if (existing.size() > 20) {
+                        existing = existing[-20..-1] // Keep last 20 entries
+                    }
+                    writeFile file: csvFile, text: existing.join("\n") + "\n"
+                } else {
+                    writeFile file: csvFile, text: "Build,Status\n${line}\n"
                 }
-                writeFile file: csvFile, text: existing.join("\n") + "\n"
-            } else {
-                writeFile file: csvFile, text: "Build,Status\n${line}\n"
             }
-        }
 
-        // Publish JUnit results (for Test Result Trend)
-        junit 'test-results/*.xml'
-        emailext(
-           
-            subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}!",
-            body: """Hi,
+            // Publish JUnit results (for Test Result Trend)
+            junit 'test-results/*.xml'
+            emailext(
+                subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}!",
+                body: """Hi,
 
 ${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}:
 
 Check console output at ${env.BUILD_URL} to view the results.
 """,
-recipientProviders: [[$class: 'RequesterRecipientProvider']]
-
-        )
+                recipientProviders: [[$class: 'RequesterRecipientProvider']]
+            )
+        }
     }
-}
-
 }
