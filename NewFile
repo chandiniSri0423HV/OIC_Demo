@@ -266,6 +266,11 @@ pipeline {
 </testsuite>
 """
             writeFile file: "test-results/result.xml", text: xml
+
+            // 🔹 Force Jenkins build result if failed
+            if (failCount > 0) {
+                currentBuild.result = 'FAILURE'
+            }
         }
 
         junit 'test-results/*.xml'
