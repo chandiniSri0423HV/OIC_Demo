@@ -224,17 +224,28 @@ pipeline {
             }
         }
 		stage('Run Tests') {
-    steps {
-        echo "Running tests..."
-        bat 'mkdir test-results' // Ensure folder exists
-        writeFile file: 'test-results/TEST-Dummy.xml', text: """
-            <testsuite tests="1" failures="0">
-                <testcase classname="dummy.Class" name="dummyTest"/>
-            </testsuite>
-        """
-        bat 'dir test-results' // List files so you can see in Console Output that the file exists
-    }
-}
+            steps {
+                junit testResults: 'test-results/*.xml', allowEmptyResults: true
+
+                script {
+                    def testResultAction = currentBuild.rawBuild.getAction(hudson.tasks.junit.TestResultAction)
+                    def passed = testResultAction?.result?.passCount ?: 0
+                    def failed = testResultAction?.result?.failCount ?: 0
+                    def skipped = testResultAction?.result?.skipCount ?: 0
+
+                    // Append results so the trend builds over time
+                    def csvHeader = "Build,Passed,Failed,Skipped\n"
+                    def csvLine = "${env.BUILD_NUMBER},${passed},${failed},${skipped}\n"
+                    def filePath = "test_trend.csv"
+
+                    if (!fileExists(filePath)) {
+                        writeFile file: filePath, text: csvHeader + csvLine
+                    } else {
+                        writeFile file: filePath, text: readFile(filePath) + csvLine
+                    }
+                }
+            }
+        }
 
     }//Stages end
 	
@@ -252,25 +263,20 @@ Check console output at ${env.BUILD_URL} to view the results.
 recipientProviders: [[$class: 'RequesterRecipientProvider']]
 
         )
-		// Publish test results (make sure test XML exists)
-        junit(
-            testResults: 'test-results/*.xml',
-            allowEmptyResults: true,
-            keepLongStdio: true
-        )
-		 failure {
-        script {
-            def resultsDir = "test-results"
-            sh "mkdir -p ${resultsDir}"
-            writeFile file: "${resultsDir}/forced_failure.xml", text: """
-<testsuite name="ForcedFailure" tests="1" failures="1">
-  <testcase classname="Pipeline" name="BuildFailure">
-    <failure message="Pipeline failed before tests ran"/>
-  </testcase>
-</testsuite>
-"""
-        }
-    }
+		archiveArtifacts artifacts: 'test_trend.csv', onlyIfSuccessful: false
+
+            plot csvFileName: 'TestTrend.csv',
+                 group: 'Test Metrics',
+                 title: 'Test Result Trend',
+                 style: 'line',
+                 yaxis: 'Number of Tests',
+                 series: [
+                     [file: 'test_trend.csv', label: 'Passed', inclusionFlag: 'OFF', exclusionValues: '', url: '', displayTableFlag: false],
+                     [file: 'test_trend.csv', label: 'Failed', inclusionFlag: 'OFF', exclusionValues: '', url: '', displayTableFlag: false],
+                     [file: 'test_trend.csv', label: 'Skipped', inclusionFlag: 'OFF', exclusionValues: '', url: '', displayTableFlag: false]
+                 ]
+
+		
     }
 	 
 }
