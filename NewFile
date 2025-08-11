@@ -224,33 +224,38 @@ pipeline {
             }
         }
 		stage('Generate CSV') {
-            steps {
-                sh '''
-                echo "Time,Value" > build_data.csv
-                echo "$(date +%s),$((RANDOM % 100))" >> build_data.csv
-                '''
-            }
-        }
-        stage('Publish Plot') {
     steps {
-        plot csvFileName: 'build_plot.csv',
-             csvSeries: [[file: 'build_data.csv', displayTableFlag: true]],
-             group: 'Performance',
-             style: 'line', // REQUIRED parameter
-             title: 'Build Performance'
+        sh '''
+        if [ ! -f build_data.csv ]; then
+            echo "Time,Value" > build_data.csv
+        fi
+        echo "$(date +%s),$((RANDOM % 100))" >> build_data.csv
+        '''
     }
 }
+
+stage('Publish Plot') {
+    steps {
+        plot csvFileName: 'build_plot.csv',
+             csvSeries: [[file: 'build_data.csv', displayTableFlag: true, label: 'Performance']],
+             group: 'Performance',
+             style: 'line',
+             title: 'Build Performance',
+             yaxis: 'Value',
+             keepRecords: true
+    }
+}
+
 
     }//Stages end
 	post {
         always {
             emailext(
                 subject: "Build ${currentBuild.currentResult}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: """<p>Hi,</p>
-                         <p>Build <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b> finished with status: <b>${currentBuild.currentResult}</b>.</p>
-                         <p>Check console output at: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>""",
+                body: """Hi,
+                         Build ${env.JOB_NAME} #${env.BUILD_NUMBER} finished with status: ${currentBuild.currentResult}.
+                         Check console output at: "${env.BUILD_URL}">${env.BUILD_URL}""",
                 recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider']]
-                // ❌ No 'to:' field — Jenkins will use global default recipient list
             )
         }
     }
