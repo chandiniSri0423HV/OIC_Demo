@@ -237,6 +237,8 @@ Check console output at ${env.BUILD_URL} to view the results.
 """,
                 recipientProviders: [[$class: 'RequesterRecipientProvider']]
             )
+        junit 'test-results/*.xml'
+
         }
     }
 }
