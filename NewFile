@@ -265,16 +265,16 @@ recipientProviders: [[$class: 'RequesterRecipientProvider']]
         )
 		archiveArtifacts artifacts: 'test_trend.csv', onlyIfSuccessful: false
 
-            plot csvFileName: 'TestTrend.csv',
-                 group: 'Test Metrics',
-                 title: 'Test Result Trend',
-                 style: 'line',
-                 yaxis: 'Number of Tests',
-                 series: [
-                     [file: 'test_trend.csv', label: 'Passed', inclusionFlag: 'OFF', exclusionValues: '', url: '', displayTableFlag: false],
-                     [file: 'test_trend.csv', label: 'Failed', inclusionFlag: 'OFF', exclusionValues: '', url: '', displayTableFlag: false],
-                     [file: 'test_trend.csv', label: 'Skipped', inclusionFlag: 'OFF', exclusionValues: '', url: '', displayTableFlag: false]
-                 ]
+        plot csvFileName: 'TestTrend.csv',
+             group: 'Test Metrics',
+             title: 'Test Result Trend',
+             style: 'line',
+             yaxis: 'Number of Tests',
+             csvSeries: [
+                 [file: 'test_trend.csv', label: 'Passed'],
+                 [file: 'test_trend.csv', label: 'Failed'],
+                 [file: 'test_trend.csv', label: 'Skipped']
+             ]
 
 		
     }
