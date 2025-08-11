@@ -224,30 +224,31 @@ pipeline {
             }
         }
 
-        stage('Generate CSV') {
-            steps {
-                script {
-                    def csvContent = "X,Y\n1,10\n2,20\n3,15\n4,30\n"
-                    writeFile file: 'data.csv', text: csvContent
-                }
-            }
+stage('Generate Plot') {
+    steps {
+        script {
+            plot csvFileName: 'build-status-history.csv',
+                csvSeries: [[
+                    file: 'data.csv', // must exist in workspace
+                    exclusionValues: '',
+                    displayTableFlag: false,
+                    inclusionFlag: 'OFF',
+                    url: ''
+                ]],
+                group: 'Release Management',
+                title: 'Build Pass/Fail Trend',
+                style: 'line',
+                exclZero: false,
+                keepRecords: false,
+                logarithmic: false,
+                numBuilds: '',
+                useDescr: false,
+                yaxis: 'Status',
+                yaxisMaximum: '',
+                yaxisMinimum: ''
         }
-
-        stage('Pass/Fail/Aborted History Plot') {
-            steps {
-                plot csvFileName: 'status-history.csv',
-                     csvSeries: [[
-                         file: 'status-history.csv',
-                         displayTableFlag: true,
-                         inclusionFlag: 'OFF',
-                         url: ''
-                     ]],
-                     group: 'Build Status History',
-                     style: 'line',
-                     title: 'Build Status (1=Pass, 0=Fail, 0.5=Aborted)',
-                     yaxis: 'Status'
-            }
-        }
+    }
+}
 
     } // stages end
 
