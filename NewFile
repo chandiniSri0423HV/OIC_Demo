@@ -252,10 +252,10 @@ Check console output at ${env.BUILD_URL} to view the results.
 recipientProviders: [[$class: 'RequesterRecipientProvider']]
 
         )
-    }
-	 always {
+		  // Run JUnit report publishing
         junit 'test-results/*.xml'
     }
+	 
 }
 
 }
