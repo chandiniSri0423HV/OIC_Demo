@@ -216,7 +216,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    sh 'mkdir -p test-results'  // Ensure directory exists
+                    bat 'mkdir -p test-results'  // Ensure directory exists
 
                     def passed = 0
                     def failed = 0
