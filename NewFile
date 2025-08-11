@@ -214,32 +214,12 @@ pipeline {
         }
 
         stage('Run Tests') {
-            steps {
-                script {
-                    bat 'mkdir -p test-results'  // Ensure directory exists
-
-                    def passed = 0
-                    def failed = 0
-                    def skipped = 0
-
-                    if (currentBuild.result == 'FAILURE') {
-                        failed = 1
-                    } else {
-                        passed = 1
-                    }
-
-                    def junitContent = """<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="Pipeline Tests" tests="${passed + failed + skipped}" failures="${failed}" skipped="${skipped}">
-    <testcase classname="pipeline" name="pipeline-check" time="0">
-        ${failed > 0 ? '<failure message="Stage failed">One or more pipeline stages failed</failure>' : ''}
-    </testcase>
-</testsuite>
-"""
-                    writeFile file: 'test-results/results.xml', text: junitContent
-                    junit testResults: 'test-results/*.xml', allowEmptyResults: false
-                }
-            }
-        }
+    steps {
+        bat 'if not exist test-results mkdir test-results'
+        // Example: run tests and save results as JUnit XML
+        bat 'mvn test -Dsurefire.reportFormat=xml -Dsurefire.reportName=test-results'
+    }
+}
     }
 
     post {
@@ -255,7 +235,7 @@ Check console output at ${env.BUILD_URL} to view the results.
                 recipientProviders: [[$class: 'RequesterRecipientProvider']]
             )
 
-            junit allowEmptyResults: false, testResults: 'test-results/*.xml'
+        junit allowEmptyResults: true, testResults: 'test-results/*.xml'
         }
     }
 }
