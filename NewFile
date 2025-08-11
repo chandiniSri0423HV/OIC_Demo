@@ -258,6 +258,19 @@ recipientProviders: [[$class: 'RequesterRecipientProvider']]
             allowEmptyResults: true,
             keepLongStdio: true
         )
+		 failure {
+        script {
+            def resultsDir = "test-results"
+            sh "mkdir -p ${resultsDir}"
+            writeFile file: "${resultsDir}/forced_failure.xml", text: """
+<testsuite name="ForcedFailure" tests="1" failures="1">
+  <testcase classname="Pipeline" name="BuildFailure">
+    <failure message="Pipeline failed before tests ran"/>
+  </testcase>
+</testsuite>
+"""
+        }
+    }
     }
 	 
 }
