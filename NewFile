@@ -217,13 +217,13 @@ tools {
         }
 
        stage('Run Tests') {
-            steps {
-                bat '''
-                    if not exist test-results mkdir test-results
-                    mvn test -Dsurefire.reportFormat=xml -Dsurefire.reportName=test-results
-                '''
-            }
-        }
+    steps {
+        bat """
+            if not exist test-results mkdir test-results
+            mvn test
+        """
+    }
+}
     }
 
     post {
@@ -239,9 +239,7 @@ Check console output at ${env.BUILD_URL} to view the results.
                 recipientProviders: [[$class: 'RequesterRecipientProvider']]
             )
 
-junit(
-                testResults: '**/test-results/*.xml',
-                allowEmptyResults: true // <-- prevents failure if no tests are found
-            )        }
+        junit 'target/surefire-reports/*.xml'
+       }
     }
 }
