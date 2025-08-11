@@ -226,12 +226,12 @@ pipeline {
 		stage('Generate CSV') {
             steps {
                 script {
-                    // Example: Generate a CSV file
                     def csvContent = "X,Y\n1,10\n2,20\n3,15\n4,30\n"
                     writeFile file: 'data.csv', text: csvContent
                 }
             }
         }
+
         stage('Plot Graph') {
             steps {
                 plot csvFileName: 'build-plot.csv',
@@ -242,7 +242,7 @@ pipeline {
                          url: ''
                      ]],
                      group: 'Build Metrics',
-                     style: 'line',          // simple line graph
+                     style: 'line',
                      title: 'Sample Build Data',
                      yaxis: 'Value'
             }
