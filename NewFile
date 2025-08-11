@@ -114,25 +114,14 @@ pipeline {
                             writeFile file: 'payload.json', text: payload
 
                             def selectedOption = params.Import_Method.trim()
-                            if (selectedOption == 'New') {
-                                echo 'Adding new connection'
-                                bat """
-                                    curl -X POST ^
-                                    -H "Authorization: Bearer ${OAuth}" ^
-                                    -H "X-HTTP-Method-Override: PATCH" ^
-                                    -H "Content-Type: application/json" ^
-                                    -d @payload.json "${serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${testInstance}"
-                                """
-                            } else if (selectedOption == 'Replace') {
-                                echo 'Replacing a connection'
-                                bat """
-                                    curl -X POST ^
-                                    -H "Authorization: Bearer ${OAuth}" ^
-                                    -H "X-HTTP-Method-Override: PATCH" ^
-                                    -H "Content-Type: application/json" ^
-                                    -d @payload.json "${serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${testInstance}"
-                                """
-                            }
+                            echo selectedOption == 'New' ? 'Adding new connection' : 'Replacing a connection'
+                            bat """
+                                curl -X POST ^
+                                -H "Authorization: Bearer ${OAuth}" ^
+                                -H "X-HTTP-Method-Override: PATCH" ^
+                                -H "Content-Type: application/json" ^
+                                -d @payload.json "${serviceURL}/ic/api/integration/v1/connections/${field4}?integrationInstance=${testInstance}"
+                            """
                         }
                     }
                 }
@@ -156,8 +145,8 @@ pipeline {
                         def files = params.Lookup_FileNames.split(',')
                         def selectedOption = params.Import_Method.trim()
 
-                        for (int i = 0; i < files.size(); i++) {
-                            def fileName = files[i].trim()
+                        for (fileName in files) {
+                            fileName = fileName.trim()
                             if (fileName) {
                                 if (selectedOption == 'New') {
                                     echo 'Adding new lookup'
@@ -223,62 +212,50 @@ pipeline {
                 }
             }
         }
-		stage('Run Tests') {
+
+        stage('Run Tests') {
             steps {
-                junit testResults: 'test-results/*.xml', allowEmptyResults: true
-
                 script {
-                    def testResultAction = currentBuild.rawBuild.getAction(hudson.tasks.junit.TestResultAction)
-                    def passed = testResultAction?.result?.passCount ?: 0
-                    def failed = testResultAction?.result?.failCount ?: 0
-                    def skipped = testResultAction?.result?.skipCount ?: 0
+                    sh 'mkdir -p test-results'  // Ensure directory exists
 
-                    // Append results so the trend builds over time
-                    def csvHeader = "Build,Passed,Failed,Skipped\n"
-                    def csvLine = "${env.BUILD_NUMBER},${passed},${failed},${skipped}\n"
-                    def filePath = "test_trend.csv"
+                    def passed = 0
+                    def failed = 0
+                    def skipped = 0
 
-                    if (!fileExists(filePath)) {
-                        writeFile file: filePath, text: csvHeader + csvLine
+                    if (currentBuild.result == 'FAILURE') {
+                        failed = 1
                     } else {
-                        writeFile file: filePath, text: readFile(filePath) + csvLine
+                        passed = 1
                     }
+
+                    def junitContent = """<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Pipeline Tests" tests="${passed + failed + skipped}" failures="${failed}" skipped="${skipped}">
+    <testcase classname="pipeline" name="pipeline-check" time="0">
+        ${failed > 0 ? '<failure message="Stage failed">One or more pipeline stages failed</failure>' : ''}
+    </testcase>
+</testsuite>
+"""
+                    writeFile file: 'test-results/results.xml', text: junitContent
+                    junit testResults: 'test-results/*.xml', allowEmptyResults: false
                 }
             }
         }
+    }
 
-    }//Stages end
-	
-	post {
-    always {
-        emailext(
-           
-            subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}!",
-            body: """Hi,
+    post {
+        always {
+            emailext(
+                subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}!",
+                body: """Hi,
 
 ${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}:
 
 Check console output at ${env.BUILD_URL} to view the results.
 """,
-recipientProviders: [[$class: 'RequesterRecipientProvider']]
+                recipientProviders: [[$class: 'RequesterRecipientProvider']]
+            )
 
-        )
-		archiveArtifacts artifacts: 'test_trend.csv', onlyIfSuccessful: false
-
-        plot csvFileName: 'TestTrend.csv',
-             group: 'Test Metrics',
-             title: 'Test Result Trend',
-             style: 'line',
-             yaxis: 'Number of Tests',
-             csvSeries: [
-                 [file: 'test_trend.csv', label: 'Passed'],
-                 [file: 'test_trend.csv', label: 'Failed'],
-                 [file: 'test_trend.csv', label: 'Skipped']
-             ]
-
-		
+            junit allowEmptyResults: false, testResults: 'test-results/*.xml'
+        }
     }
-	 
-}
-
 }
