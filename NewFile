@@ -232,13 +232,14 @@ pipeline {
             }
         }
         stage('Publish Plot') {
-            steps {
-                plot csvFileName: 'plot.csv',
-                     csvSeries: [[file: 'build_data.csv', displayTableFlag: true]],
-                     group: 'Performance',
-                     title: 'Build Performance'
-            }
-        }
+    steps {
+        plot csvFileName: 'build_plot.csv',
+             csvSeries: [[file: 'build_data.csv', displayTableFlag: true]],
+             group: 'Performance',
+             style: 'line', // REQUIRED parameter
+             title: 'Build Performance'
+    }
+}
 
     }//Stages end
 	post {
