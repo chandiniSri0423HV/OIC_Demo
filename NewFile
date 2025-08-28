@@ -49,37 +49,24 @@ pipeline {
     }
 }
 */
-stage('Check OIC Status') {
-  steps {
-    script {
-      def serviceURL = ""
-      def testInstance = ""
-      if (params.InstanceURL == "DEV") {
-        serviceURL = env.DEV_URL
-        testInstance = env.test_Integration_Instance
-      }
+def httpCode = bat(
+  script: """
+  curl -s -o NUL -w "%%{http_code}" ^
+  "${serviceURL}/ic/api/integration/v1/integrations?integrationInstance=${testInstance}&limit=1"
+  """,
+  returnStdout: true
+).trim()
 
-      // Ping a runtime API WITHOUT Authorization to detect instance availability
-      def httpCode = bat(
-        script: """
-        curl -s -o NUL -w "%%{http_code}" ^
-        "${serviceURL}/ic/api/integration/v1/integrations?integrationInstance=${testInstance}&limit=1"
-        """,
-        returnStdout: true
-      ).trim().replaceAll("[^0-9]", "")
+echo "Raw HTTP code from curl: '${httpCode}'"
 
-      echo "OIC runtime ping HTTP code: ${httpCode}"
-
-      if (httpCode.startsWith("5") || httpCode == "503") {
-        error("❌ OIC instance appears INACTIVE/DOWN (HTTP ${httpCode}). Stopping pipeline.")
-      } else if (httpCode == "200" || httpCode == "401" || httpCode == "403") {
-        echo "✅ OIC service is reachable (HTTP ${httpCode}). Continuing…"
-      } else {
-        error("❌ Unexpected response from OIC runtime: HTTP ${httpCode}. Stopping pipeline.")
-      }
-    }
-  }
+if (httpCode == "503") {
+  error("❌ OIC instance appears INACTIVE/DOWN (HTTP ${httpCode}). Stopping pipeline.")
+} else if (httpCode == "200" || httpCode == "401" || httpCode == "403") {
+  echo "✅ OIC service is reachable (HTTP ${httpCode}). Continuing…"
+} else {
+  error("❌ Unexpected response from OIC runtime: HTTP ${httpCode}. Stopping pipeline.")
 }
+
 
 
         stage('Import Integration') {
