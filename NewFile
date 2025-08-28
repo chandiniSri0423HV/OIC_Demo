@@ -63,11 +63,11 @@ stage('Check OIC Status') {
 
                 // 🔹 Execute curl to check OIC status
                 def httpCode = bat(
-                    script: """
+                    /*script: """
                     curl -s -o NUL -w "%%{http_code}" ^
                     -H "Authorization: Bearer %OAuth%" ^
                     "${serviceURL}/ic/api/integration/v1/integrations?limit=1"
-                    """,
+                    """,*/
                     returnStdout: true
                 ).trim()
 
