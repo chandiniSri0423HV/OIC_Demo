@@ -52,41 +52,21 @@ pipeline {
 stage('Check OIC Status') {
     steps {
         script {
-                               withCredentials([
-                        usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW'),
-                        string(credentialsId: 'OAuth', variable: 'OAuth')
-                    ]) {
-                        def serviceURL = ""
-                        def testInstance = ""
-                        if (params.InstanceURL == "DEV") {
-                            serviceURL = env.DEV_URL
-                            testInstance = env.test_Integration_Instance
-                        }
+            def url = "${serviceURL}/ic/api/integration/v1/integrations?limit=1"
+            
+            // curl command with single quotes around %{http_code}
+            def httpCode = sh(
+                script: """curl -s -o /dev/null -w '%{http_code}' \
+                    -H "Authorization: Bearer ${OAuth}" \
+                    "${url}" """,
+                returnStdout: true
+            ).trim()
 
-                // run curl and capture only the HTTP code
-                def httpCode = bat(
-                    script: """
-                    curl -s -o NUL -w "%%{http_code}" ^
-                    -H "Authorization: Bearer %OAuth%" ^
-                    "${serviceURL}/ic/api/integration/v1/integrations?limit=1" ^
-                    | findstr /R "[0-9][0-9][0-9]$"
-                    """,
-                    returnStdout: true
-                ).trim()
-
-                echo "Raw HTTP code from curl: " + httpCode
-
-                if (httpCode == "503") {
-                    error("❌ OIC instance appears INACTIVE/DOWN (HTTP ${httpCode}). Stopping pipeline.")
-                } else if (httpCode == "200") {
-                    echo "✅ OIC is active and credentials are valid. Continuing…"
-                } else if (httpCode == "401" || httpCode == "403") {
-                    error("❌ Invalid or expired OAuth token (HTTP ${httpCode}). Stopping pipeline.")
-                } else if (httpCode == "404") {
-                    error("❌ OIC API not reachable (HTTP 404) — check serviceURL: ${serviceURL}")
-                } else {
-                    error("❌ Unexpected response from OIC runtime: HTTP ${httpCode}. Stopping pipeline.")
-                }
+            if (httpCode == "200") {
+                echo "✅ OIC Instance is ACTIVE"
+            } else {
+                echo "❌ OIC Instance is INACTIVE or Unreachable. HTTP Code: ${httpCode}"
+                error("Stopping pipeline because OIC instance is not active.")
             }
         }
     }
