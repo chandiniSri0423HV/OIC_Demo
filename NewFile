@@ -52,27 +52,41 @@ pipeline {
 stage('Check OIC Status') {
     steps {
         script {
-            def httpCode = bat(
-                script: """
-                curl -s -o NUL -w "%%{http_code}" ^
-                "${serviceURL}/ic/api/integration/v1/integrations?integrationInstance=${testInstance}&limit=1"
-                """,
-                returnStdout: true
-            ).trim()
+            withCredentials([
+                usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW'),
+                string(credentialsId: 'OAuth', variable: 'OAuth')
+            ]) {
+                def serviceURL = ""
+                def testInstance = ""
+                if (params.InstanceURL == "DEV") {
+                    serviceURL = env.DEV_URL
+                    testInstance = env.test_Integration_Instance
+                }
 
-            echo "Raw HTTP code from curl: '${httpCode}'"
+                def httpCode = bat(
+                    script: """
+                    curl -s -o NUL -w "%%{http_code}" ^
+                    -H "Authorization: Bearer %OAuth%" ^
+                    "${serviceURL}/ic/api/integration/v1/integrations?integrationInstance=${testInstance}&limit=1"
+                    """,
+                    returnStdout: true
+                ).trim()
 
-            if (httpCode == "503") {
-                error("❌ OIC instance appears INACTIVE/DOWN (HTTP ${httpCode}). Stopping pipeline.")
-            } else if (httpCode == "200" || httpCode == "401" || httpCode == "403") {
-                echo "✅ OIC service is reachable (HTTP ${httpCode}). Continuing…"
-            } else {
-                error("❌ Unexpected response from OIC runtime: HTTP ${httpCode}. Stopping pipeline.")
+                echo "Raw HTTP code from curl: '${httpCode}'"
+
+                if (httpCode == "503") {
+                    error("❌ OIC instance appears INACTIVE/DOWN (HTTP ${httpCode}). Stopping pipeline.")
+                } else if (httpCode == "200") {
+                    echo "✅ OIC is active and credentials are valid. Continuing…"
+                } else if (httpCode == "401" || httpCode == "403") {
+                    error("❌ Invalid or expired OAuth token (HTTP ${httpCode}). Stopping pipeline.")
+                } else {
+                    error("❌ Unexpected response from OIC runtime: HTTP ${httpCode}. Stopping pipeline.")
+                }
             }
         }
     }
 }
-
 
 
         stage('Import Integration') {
