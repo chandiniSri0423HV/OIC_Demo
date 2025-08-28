@@ -49,22 +49,28 @@ pipeline {
     }
 }
 */
-def httpCode = bat(
-  script: """
-  curl -s -o NUL -w "%%{http_code}" ^
-  "${serviceURL}/ic/api/integration/v1/integrations?integrationInstance=${testInstance}&limit=1"
-  """,
-  returnStdout: true
-).trim()
+stage('Check OIC Status') {
+    steps {
+        script {
+            def httpCode = bat(
+                script: """
+                curl -s -o NUL -w "%%{http_code}" ^
+                "${serviceURL}/ic/api/integration/v1/integrations?integrationInstance=${testInstance}&limit=1"
+                """,
+                returnStdout: true
+            ).trim()
 
-echo "Raw HTTP code from curl: '${httpCode}'"
+            echo "Raw HTTP code from curl: '${httpCode}'"
 
-if (httpCode == "503") {
-  error("❌ OIC instance appears INACTIVE/DOWN (HTTP ${httpCode}). Stopping pipeline.")
-} else if (httpCode == "200" || httpCode == "401" || httpCode == "403") {
-  echo "✅ OIC service is reachable (HTTP ${httpCode}). Continuing…"
-} else {
-  error("❌ Unexpected response from OIC runtime: HTTP ${httpCode}. Stopping pipeline.")
+            if (httpCode == "503") {
+                error("❌ OIC instance appears INACTIVE/DOWN (HTTP ${httpCode}). Stopping pipeline.")
+            } else if (httpCode == "200" || httpCode == "401" || httpCode == "403") {
+                echo "✅ OIC service is reachable (HTTP ${httpCode}). Continuing…"
+            } else {
+                error("❌ Unexpected response from OIC runtime: HTTP ${httpCode}. Stopping pipeline.")
+            }
+        }
+    }
 }
 
 
