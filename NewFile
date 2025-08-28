@@ -52,13 +52,16 @@ pipeline {
 stage('Check OIC Status') {
     steps {
         script {
-            withCredentials([
-                string(credentialsId: 'OAuth', variable: 'OAuth')
-            ]) {
-                def serviceURL = ""
-                if (params.InstanceURL == "DEV") {
-                    serviceURL = env.DEV_URL
-                }
+                               withCredentials([
+                        usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW'),
+                        string(credentialsId: 'OAuth', variable: 'OAuth')
+                    ]) {
+                        def serviceURL = ""
+                        def testInstance = ""
+                        if (params.InstanceURL == "DEV") {
+                            serviceURL = env.DEV_URL
+                            testInstance = env.test_Integration_Instance
+                        }
 
                 // run curl and capture only the HTTP code
                 def httpCode = bat(
