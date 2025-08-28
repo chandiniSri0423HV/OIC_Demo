@@ -57,17 +57,16 @@ stage('Check OIC Status') {
                 string(credentialsId: 'OAuth', variable: 'OAuth')
             ]) {
                 def serviceURL = ""
-                def testInstance = ""
                 if (params.InstanceURL == "DEV") {
                     serviceURL = env.DEV_URL
-                    testInstance = env.test_Integration_Instance
                 }
 
+                // 🔹 Execute curl to check OIC status
                 def httpCode = bat(
                     script: """
                     curl -s -o NUL -w "%%{http_code}" ^
                     -H "Authorization: Bearer %OAuth%" ^
-                    "${serviceURL}/ic/api/integration/v1/integrations?integrationInstance=${testInstance}&limit=1"
+                    "${serviceURL}/ic/api/integration/v1/integrations?limit=1"
                     """,
                     returnStdout: true
                 ).trim()
@@ -87,6 +86,7 @@ stage('Check OIC Status') {
         }
     }
 }
+
 
 
         stage('Import Integration') {
