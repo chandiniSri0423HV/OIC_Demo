@@ -53,7 +53,6 @@ stage('Check OIC Status') {
     steps {
         script {
             withCredentials([
-                usernamePassword(credentialsId: 'DEV_CredID', usernameVariable: 'USR', passwordVariable: 'PSW'),
                 string(credentialsId: 'OAuth', variable: 'OAuth')
             ]) {
                 def serviceURL = ""
@@ -61,17 +60,18 @@ stage('Check OIC Status') {
                     serviceURL = env.DEV_URL
                 }
 
-                // 🔹 Execute curl to check OIC status
-def httpCode = bat(
-    script: """
-    curl -s -o NUL -w "%%{http_code}" -H "Authorization: Bearer %OAuth%" 
-    "${serviceURL}/ic/api/integration/v1/integrations?limit=1" 
-    | findstr /R "[0-9][0-9][0-9]$"
-    """,
-    returnStdout: true
-).trim()
+                // run curl and capture only the HTTP code
+                def httpCode = bat(
+                    script: """
+                    curl -s -o NUL -w "%%{http_code}" ^
+                    -H "Authorization: Bearer %OAuth%" ^
+                    "${serviceURL}/ic/api/integration/v1/integrations?limit=1" ^
+                    | findstr /R "[0-9][0-9][0-9]$"
+                    """,
+                    returnStdout: true
+                ).trim()
 
-echo "Raw HTTP code from curl: ${httpCode}"
+                echo "Raw HTTP code from curl: " + httpCode
 
                 if (httpCode == "503") {
                     error("❌ OIC instance appears INACTIVE/DOWN (HTTP ${httpCode}). Stopping pipeline.")
@@ -79,6 +79,8 @@ echo "Raw HTTP code from curl: ${httpCode}"
                     echo "✅ OIC is active and credentials are valid. Continuing…"
                 } else if (httpCode == "401" || httpCode == "403") {
                     error("❌ Invalid or expired OAuth token (HTTP ${httpCode}). Stopping pipeline.")
+                } else if (httpCode == "404") {
+                    error("❌ OIC API not reachable (HTTP 404) — check serviceURL: ${serviceURL}")
                 } else {
                     error("❌ Unexpected response from OIC runtime: HTTP ${httpCode}. Stopping pipeline.")
                 }
@@ -86,6 +88,7 @@ echo "Raw HTTP code from curl: ${httpCode}"
         }
     }
 }
+
 
 
 
