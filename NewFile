@@ -14,6 +14,62 @@ pipeline {
 
     stages {
 
+        stage('Validate OIC Credentials') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'OAuth', variable: 'OAuth')]) {
+                        def serviceURL = ""
+                        if (params.InstanceURL == "DEV") {
+                            serviceURL = env.DEV_URL
+                        }
+
+                        def response = bat(
+                            script: """
+                            curl -s -o NUL -w "%%{http_code}" ^
+                            -H "Authorization: Bearer ${OAuth}" ^
+                            "${serviceURL}/ic/api/integration/v1/integrations"
+                            """,
+                            returnStdout: true
+                        ).trim()
+
+                        if (response != "200") {
+                            error("❌ Invalid OIC credentials. Stopping pipeline.")
+                        } else {
+                            echo "✅ OIC credentials are valid."
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Check OIC Status') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'OAuth', variable: 'OAuth')]) {
+                        def serviceURL = ""
+                        if (params.InstanceURL == "DEV") {
+                            serviceURL = env.DEV_URL
+                        }
+
+                        def statusResponse = bat(
+                            script: """
+                            curl -s ^
+                            -H "Authorization: Bearer ${OAuth}" ^
+                            "${serviceURL}/ic/api/common/v1/status"
+                            """,
+                            returnStdout: true
+                        ).trim()
+
+                        if (statusResponse.contains("DOWN") || statusResponse.contains("INACTIVE")) {
+                            error("❌ OIC instance is inactive. Stopping pipeline.")
+                        } else {
+                            echo "✅ OIC instance is active."
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Import Integration') {
             when {
                 expression { return params.IARFileName && params.Import_Method }
@@ -224,41 +280,35 @@ pipeline {
             }
         }
 
-stage('Generate Plot') {
-    steps {
-        script {
-            plot csvFileName: 'build-status-history.csv',
-                csvSeries: [[
-                    file: 'data.csv', // must exist in workspace
-                    exclusionValues: '',
-                    displayTableFlag: false,
-                    inclusionFlag: 'OFF',
-                    url: ''
-                ]],
-                group: 'Release Management',
-                title: 'Build Pass/Fail Trend',
-                style: 'line',
-                exclZero: false,
-                keepRecords: false,
-                logarithmic: false,
-                numBuilds: '',
-                useDescr: false,
-                yaxis: 'Status',
-                yaxisMaximum: '',
-                yaxisMinimum: ''
+        stage('Generate CSV') {
+            steps {
+                script {
+                    def csvContent = "X,Y\n1,10\n2,20\n3,15\n4,30\n"
+                    writeFile file: 'data.csv', text: csvContent
+                }
+            }
         }
-    }
-}
 
-    } // stages end
+        stage('Plot Graph') {
+            steps {
+                plot csvFileName: 'build-plot.csv',
+                     csvSeries: [[
+                         file: 'data.csv',
+                         displayTableFlag: false,
+                         inclusionFlag: 'OFF',
+                         url: ''
+                     ]],
+                     group: 'Build Metrics',
+                     style: 'line',
+                     title: 'Sample Build Data',
+                     yaxis: 'Value'
+            }
+        }
 
+    }//Stages end
+    
     post {
         always {
-            // Publish TestNG report graph
-            testNG(showFailedBuilds: true,
-                   unstableFails: 5, unstableSkips: 25,
-                   failedFails: 10, failedSkips: 50)
-
             emailext(
                 subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}!",
                 body: """Hi,
