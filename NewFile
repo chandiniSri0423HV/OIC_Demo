@@ -16,7 +16,8 @@ pipeline {
 
         
 
-     /*   stage('Validate OIC Credentials') {
+     /* 
+stage('Validate OIC Credentials') {
     steps {
         script {
             withCredentials([string(credentialsId: 'OAuth', variable: 'OAuth')]) {
